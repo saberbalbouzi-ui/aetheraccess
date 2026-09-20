@@ -1,17 +1,18 @@
-# AetherAccess V2
+# AetherAccess V3
 
-SaaS beta pour professionnels francophones de la rénovation et de l’aménagement intérieur.
+Assistant de consultation pour professionnels francophones de la rénovation et de l’aménagement intérieur.
 
-## Fonctionnalités V2
+## Fonctionnalités V3
 
-- Landing page responsive.
-- Pré-diagnostic rénovation guidé.
-- Résumé, travaux prioritaires, informations manquantes et points de vigilance.
-- Trois scénarios : essentiel, confort et complet.
-- Demande de devis structurée par lots.
-- Copie des résultats et de la demande de devis.
+- Assistant guidé en quatre étapes : projet, pièces, vérification, dossier.
+- Champs adaptés aux informations réellement nécessaires.
+- Ajout de plusieurs pièces avec surface et travaux souhaités.
+- Détection automatique des lots de travaux.
+- Contrôle automatique de complétude.
+- Génération d’un dossier de consultation prêt à relire.
+- E-mail prêt à relire et copier.
 - Formulaire de liste bêta connecté à Supabase (`beta_waitlist`).
-- Génération déterministe sans API IA externe.
+- Aucun prix inventé et aucune API IA externe.
 
 ## Variables Vercel
 
@@ -20,19 +21,15 @@ VITE_SUPABASE_URL=https://ydujjwnijjjjjjyokmvx.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 ```
 
-Ces variables doivent être configurées dans Vercel pour Production, Preview et Development. N’utilisez jamais la clé `service_role` côté frontend.
+Configurez ces variables pour Production, Preview et Development. N’utilisez jamais la clé `service_role` côté frontend.
 
-## Développement local
+## Utilisation
 
-```bash
-npm install
-npm run dev
-```
+1. Renseignez le projet, le budget et le délai.
+2. Ajoutez les pièces concernées.
+3. Sélectionnez les travaux souhaités par pièce.
+4. Vérifiez les informations manquantes.
+5. Générez le dossier final.
+6. Relisez et copiez l’e-mail avant de l’envoyer.
 
-## Build
-
-```bash
-npm run build
-```
-
-Les résultats sont des aides à la préparation de projet et doivent être relus et validés par un professionnel. Aucun diagnostic réglementaire, devis contractuel ou conseil technique définitif n’est produit.
+Le dossier produit est une base de consultation. Il ne constitue pas un devis contractuel, un diagnostic réglementaire ni une validation des prix ou des travaux.
