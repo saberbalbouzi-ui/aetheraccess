@@ -1,0 +1,1 @@
+V5 étape A — préparation de la sauvegarde future, sans modification Supabase.

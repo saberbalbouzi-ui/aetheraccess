@@ -1,0 +1,1 @@
+V5 étape A — composant d’en-tête.
