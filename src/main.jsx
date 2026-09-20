@@ -40,15 +40,33 @@ function BriefBuilder() {
 
 function Waitlist() {
   const [form, setForm] = useState({ full_name: '', email: '', profession: '', primary_need: '' });
-  const [state, setState] = useState('idle');
+  const [state, setState] = useState({ kind: 'idle', message: '' });
   const submit = async (event) => {
-    event.preventDefault(); setState('loading');
-    if (!supabaseConfigured) { setState('config'); return; }
-    const { error } = await supabase.from('beta_waitlist').insert(form);
-    setState(error ? (error.code === '23505' ? 'duplicate' : 'error') : 'success');
-    if (!error) setForm({ full_name: '', email: '', profession: '', primary_need: '' });
+    event.preventDefault();
+    setState({ kind: 'loading', message: '' });
+    if (!supabaseConfigured || !supabase) {
+      setState({ kind: 'error', message: 'Configuration Supabase absente dans le build Vercel.' });
+      return;
+    }
+    const payload = {
+      full_name: form.full_name.trim(),
+      email: form.email.trim().toLowerCase(),
+      profession: form.profession.trim() || null,
+      primary_need: form.primary_need.trim() || null,
+    };
+    const { error } = await supabase.from('beta_waitlist').insert(payload);
+    if (!error) {
+      setState({ kind: 'success', message: 'Votre demande a bien été enregistrée.' });
+      setForm({ full_name: '', email: '', profession: '', primary_need: '' });
+      return;
+    }
+    if (error.code === '23505') {
+      setState({ kind: 'info', message: 'Cet e-mail est déjà inscrit.' });
+      return;
+    }
+    setState({ kind: 'error', message: `Erreur Supabase (${error.code || 'sans code'}): ${error.message}` });
   };
-  return <div className="waitlist-box"><span className="eyebrow">ACCÈS BÊTA</span><h2>Recevez une invitation.</h2><p>Décrivez votre activité : nous vous contacterons pour tester les premiers outils.</p><form onSubmit={submit}><input required minLength="2" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} placeholder="Nom complet" /><input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="E-mail professionnel" /><input value={form.profession} onChange={(e) => setForm({ ...form, profession: e.target.value })} placeholder="Métier" /><textarea value={form.primary_need} onChange={(e) => setForm({ ...form, primary_need: e.target.value })} placeholder="Quel outil vous ferait gagner le plus de temps ?" /><button className="button light" disabled={state === 'loading'}>{state === 'loading' ? 'Envoi...' : 'Rejoindre la bêta'} <span>→</span></button></form>{state === 'success' && <p className="form-message success">Votre demande a bien été enregistrée.</p>}{state === 'duplicate' && <p className="form-message">Cet e-mail est déjà inscrit.</p>}{state === 'error' && <p className="form-message error">Impossible d’enregistrer la demande. Réessayez.</p>}{state === 'config' && <p className="form-message error">Configuration Supabase absente dans Vercel.</p>}</div>;
+  return <div className="waitlist-box"><span className="eyebrow">ACCÈS BÊTA</span><h2>Recevez une invitation.</h2><p>Décrivez votre activité : nous vous contacterons pour tester les premiers outils.</p><form onSubmit={submit}><input required minLength="2" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} placeholder="Nom complet" /><input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="E-mail professionnel" /><input value={form.profession} onChange={(e) => setForm({ ...form, profession: e.target.value })} placeholder="Métier" /><textarea value={form.primary_need} onChange={(e) => setForm({ ...form, primary_need: e.target.value })} placeholder="Quel outil vous ferait gagner le plus de temps ?" /><button className="button light" disabled={state.kind === 'loading'}>{state.kind === 'loading' ? 'Envoi...' : 'Rejoindre la bêta'} <span>→</span></button></form>{state.message && <p className={`form-message ${state.kind}`}>{state.message}</p>}</div>;
 }
 
 function App() {
