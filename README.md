@@ -1,35 +1,22 @@
-# AetherAccess V3
+# AetherAccess V4
 
-Assistant de consultation pour professionnels francophones de la rénovation et de l’aménagement intérieur.
+Assistant de consultation simplifié pour les projets de rénovation.
 
-## Fonctionnalités V3
+## Objectif V4
 
-- Assistant guidé en quatre étapes : projet, pièces, vérification, dossier.
-- Champs adaptés aux informations réellement nécessaires.
-- Ajout de plusieurs pièces avec surface et travaux souhaités.
-- Détection automatique des lots de travaux.
-- Contrôle automatique de complétude.
-- Génération d’un dossier de consultation prêt à relire.
-- E-mail prêt à relire et copier.
-- Formulaire de liste bêta connecté à Supabase (`beta_waitlist`).
-- Aucun prix inventé et aucune API IA externe.
+L’utilisateur n’a pas besoin de savoir rédiger un devis. Il répond à des questions simples et l’application prépare automatiquement un dossier à relire.
 
-## Variables Vercel
+## Fonctionnalités
 
-```text
-VITE_SUPABASE_URL=https://ydujjwnijjjjjjyokmvx.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
-```
+- Budget choisi par fourchette indicative.
+- Mois et année de démarrage séparés.
+- Objectifs sélectionnables avec cases simples.
+- État existant sélectionnable avec explication facultative.
+- Options « Je ne sais pas encore » et « À préciser ».
+- Ajout de pièces et sélection des travaux.
+- Détection automatique des lots.
+- Contrôle de complétude.
+- Dossier final et e-mail prêt à relire.
+- Liste bêta connectée à Supabase.
 
-Configurez ces variables pour Production, Preview et Development. N’utilisez jamais la clé `service_role` côté frontend.
-
-## Utilisation
-
-1. Renseignez le projet, le budget et le délai.
-2. Ajoutez les pièces concernées.
-3. Sélectionnez les travaux souhaités par pièce.
-4. Vérifiez les informations manquantes.
-5. Générez le dossier final.
-6. Relisez et copiez l’e-mail avant de l’envoyer.
-
-Le dossier produit est une base de consultation. Il ne constitue pas un devis contractuel, un diagnostic réglementaire ni une validation des prix ou des travaux.
+Les fourchettes de budget sont des repères de planification choisis par l’utilisateur et ne constituent pas un prix de travaux. Le prix final dépend de la visite, des quantités, des matériaux, de l’état du bien, de la localisation et du devis de l’entreprise. Aucun appel IA, paiement ou changement de schéma Supabase n’est inclus dans cette version.
