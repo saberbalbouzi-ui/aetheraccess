@@ -1,14 +1,17 @@
-# AetherAccess V1
+# AetherAccess V2
 
 SaaS beta pour professionnels francophones de la rénovation et de l’aménagement intérieur.
 
-## Fonctionnalités V1
+## Fonctionnalités V2
 
 - Landing page responsive.
+- Pré-diagnostic rénovation guidé.
+- Résumé, travaux prioritaires, informations manquantes et points de vigilance.
+- Trois scénarios : essentiel, confort et complet.
+- Demande de devis structurée par lots.
+- Copie des résultats et de la demande de devis.
 - Formulaire de liste bêta connecté à Supabase (`beta_waitlist`).
-- Générateur de brief de rénovation sans API IA externe.
-- Sauvegarde locale du dernier brief dans le navigateur.
-- Aucun paiement ni clé secrète dans le frontend.
+- Génération déterministe sans API IA externe.
 
 ## Variables Vercel
 
@@ -32,4 +35,4 @@ npm run dev
 npm run build
 ```
 
-La V1 ne fournit pas encore d’appel à un modèle IA, de paiement ou de système d’authentification. Ces fonctionnalités seront ajoutées après validation de la bêta.
+Les résultats sont des aides à la préparation de projet et doivent être relus et validés par un professionnel. Aucun diagnostic réglementaire, devis contractuel ou conseil technique définitif n’est produit.
