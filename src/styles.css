@@ -115,6 +115,14 @@ button small { display: block; margin-top: 6px; color: #698073; font-size: 12.5p
 .v7-result-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
 .v7-result-actions .dossier-action:disabled { opacity: .55; cursor: not-allowed; }
 
+/* --- V13 · Préparer la consultation --- */
+.invite-form-dark label { color: #d9e8d9; }
+.invite-form-dark .auth-row input { border-color: #f4f4ea44; background: #f4f4ea14; color: #f4f4ea; }
+.invite-form-dark .auth-row input::placeholder { color: #b9cfc2; }
+.invite-form-dark .publish-hint { margin-top: 8px; }
+.invite-result { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+.publish-hint-dark { color: #587064; font-size: 12.5px; }
+
 /* --- Localisation --- */
 .location-selector { display: grid; gap: 14px; }
 .location-grid { display: grid; gap: 12px; max-width: 620px; }
@@ -224,7 +232,7 @@ button small { display: block; margin-top: 6px; color: #698073; font-size: 12.5p
 .comparison-table td { padding: 12px; border-bottom: 1px solid #e4e9dc; color: #173d31; vertical-align: top; }
 .comparison-table tr.quote-accepted td { background: #eef7e8; }
 .comparison-flag { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: #c9ef68; color: #153c31; font-size: 11px; font-weight: 800; }
-.comparison-note { margin: 10px 0 0; color: #698073; font-size: 12px; }
+.comparison-note { display: block; margin: 10px 0 0; color: #698073; font-size: 12px; }
 
 /* --- V9 · Suivi chantier --- */
 .site-tracker .dashboard-header h3 { margin: 0; }
