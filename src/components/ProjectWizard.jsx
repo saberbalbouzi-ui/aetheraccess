@@ -1,33 +1,299 @@
 import { useMemo, useState } from 'react';
 import { PROJECT_TYPES, PROPERTY_TYPES } from '../data/project-types';
 import { ROOMS } from '../data/rooms';
-import { getMissingInformation, suggestWorks } from '../services/suggestion-engine';
-import SuggestionCard from './SuggestionCard';
+import { suggestWorks } from '../services/suggestion-engine';
+import { getMissingItems, countOpenMissing, REASSURANCE_MESSAGE } from '../services/missing-information-engine';
+import WorkLotCard from './WorkLotCard';
+import MissingCenter from './MissingCenter';
 import LocationSelector from './LocationSelector';
 
+const EXISTING_CONDITIONS = [
+  { id: 'good', label: 'Bon état' },
+  { id: 'average', label: 'État moyen' },
+  { id: 'poor', label: 'Dégradé / ancien' },
+  { id: 'unknown', label: 'Je ne sais pas' },
+];
+
+const BATHROOM_FEATURES = [
+  { id: 'italian-shower', label: 'Douche à l’italienne' },
+  { id: 'ventilation-confirmed', label: 'Ventilation déjà présente' },
+  { id: 'bathtub', label: 'Baignoire' },
+];
+
+const OBJECTIVES = [
+  { id: 'comfort', label: 'Améliorer le confort' },
+  { id: 'energy', label: 'Réduire les consommations' },
+  { id: 'appearance', label: 'Moderniser l’apparence' },
+];
+
+const labelOf = (list, id) => list.find((item) => item.id === id)?.label || id;
+
+// Résumé dynamique : « Appartement · Cuisine · Séjour · Chambre »
+function buildSummaryChips(project) {
+  const chips = [];
+  if (project.propertyType && project.propertyType !== 'unknown') chips.push(labelOf(PROPERTY_TYPES, project.propertyType));
+  (project.roomIds || []).forEach((id) => chips.push(labelOf(ROOMS, id)));
+  if (project.location?.city) chips.push(project.location.city);
+  else if (project.location?.unknown) chips.push('Localisation à définir');
+  return chips;
+}
+
+function resultHeadline(project) {
+  const parts = [];
+  if (project.projectType && project.projectType !== 'unknown') parts.push(labelOf(PROJECT_TYPES, project.projectType));
+  if (project.propertyType && project.propertyType !== 'unknown') parts.push(labelOf(PROPERTY_TYPES, project.propertyType));
+  if (project.location?.city) parts.push(project.location.postalCode ? `${project.location.city} (${project.location.postalCode})` : project.location.city);
+  return parts.join(' · ') || 'Votre projet';
+}
+
 export default function ProjectWizard({ initialProject = {}, onSave }) {
-  const [project, setProject] = useState({ name: '', projectType: '', propertyType: '', location: {}, roomIds: [], objectives: [], ...initialProject });
+  const [project, setProject] = useState({
+    name: '',
+    projectType: '',
+    propertyType: '',
+    location: {},
+    roomIds: [],
+    objectives: [],
+    surface: '',
+    existingCondition: '',
+    features: [],
+    workStatuses: {},
+    workNotes: {},
+    missingDismissed: [],
+    ...initialProject,
+  });
+  const [step, setStep] = useState(1);
+  const [reassurance, setReassurance] = useState('');
+  const [result, setResult] = useState(null);
+
   const suggestions = useMemo(() => suggestWorks(project), [project]);
-  const missingInformation = useMemo(() => getMissingInformation({ ...project, suggestions }), [project, suggestions]);
-  const update = (patch) => setProject((current) => ({ ...current, ...patch }));
-  const toggleRoom = (id) => update({ roomIds: project.roomIds.includes(id) ? project.roomIds.filter((room) => room !== id) : [...project.roomIds, id] });
-  const toggleObjective = (id) => update({ objectives: project.objectives.includes(id) ? project.objectives.filter((objective) => objective !== id) : [...project.objectives, id] });
+  // Les choix utilisateur priment toujours sur la suggestion du moteur.
+  const lots = useMemo(
+    () => suggestions.map((work) => ({
+      ...work,
+      status: project.workStatuses[work.id] || work.status,
+      note: project.workNotes[work.id] || '',
+    })),
+    [suggestions, project.workStatuses, project.workNotes],
+  );
+  const missingItems = useMemo(() => getMissingItems(project, project.missingDismissed), [project]);
+
+  const update = (patch) => {
+    setProject((current) => ({ ...current, ...patch }));
+    setResult(null);
+  };
+  const toggle = (key, id) =>
+    update({ [key]: project[key].includes(id) ? project[key].filter((item) => item !== id) : [...project[key], id] });
+
+  const showReassurance = () => {
+    setReassurance(REASSURANCE_MESSAGE);
+    setTimeout(() => setReassurance(''), 5000);
+  };
+
+  const setWorkStatus = (workId, status) =>
+    update({ workStatuses: { ...project.workStatuses, [workId]: status } });
+  const setWorkNote = (workId, note) =>
+    update({ workNotes: { ...project.workNotes, [workId]: note } });
+
+  // Centre de contrôle : « Compléter maintenant » renvoie vers l'étape concernée,
+  // « Je ne sais pas » conserve l'élément comme point à vérifier plus tard.
+  const completeMissing = (item) => {
+    const targetStep = Number(String(item.source || '').replace('step-', '')) || 1;
+    setStep(targetStep);
+  };
+  const dismissMissing = (item) => {
+    update({ missingDismissed: [...new Set([...project.missingDismissed, item.id])] });
+    showReassurance();
+  };
+
+  const createDossier = () => {
+    const finalProject = { ...project, suggestions: lots, missingInformation: missingItems };
+    onSave?.(finalProject);
+    setResult({
+      headline: resultHeadline(finalProject),
+      rooms: (finalProject.roomIds || []).length,
+      works: lots.filter((lot) => lot.status !== 'not-applicable').length,
+      toVerify: lots.filter((lot) => lot.status === 'to-check').length,
+      missing: countOpenMissing(missingItems),
+      dismissed: missingItems.filter((item) => item.status === 'dismissed').length,
+      documents: 4, // dossier texte + PDF + DOCX + demande de devis
+    });
+  };
+
+  if (result) {
+    return (
+      <main className="v7-assistant">
+        <section className="v7-result">
+          <span className="eyebrow">DOSSIER PROJET</span>
+          <h1>Votre projet est prêt</h1>
+          <p className="v7-result-headline">{result.headline}</p>
+          <p>AetherAccess a préparé :</p>
+          <ul className="v7-result-list">
+            <li>✓ {result.rooms} pièce{result.rooms > 1 ? 's' : ''}</li>
+            <li>✓ {result.works} lot{result.works > 1 ? 's' : ''} de travaux</li>
+            <li>✓ {result.toVerify} point{result.toVerify > 1 ? 's' : ''} à vérifier</li>
+            <li>✓ {result.missing} information{result.missing > 1 ? 's' : ''} manquante{result.missing > 1 ? 's' : ''}{result.dismissed ? ` (+${result.dismissed} à compléter plus tard)` : ''}</li>
+            <li>✓ {result.documents} documents prêts à générer</li>
+          </ul>
+          <p className="v7-result-hint">Votre dossier détaillé est disponible juste en dessous, exportable en PDF ou DOCX.</p>
+          <div className="v7-result-actions">
+            <button type="button" className="dossier-action primary" onClick={() => document.querySelector('.v7-dossier')?.scrollIntoView({ behavior: 'smooth' })}>
+              Voir mon dossier
+            </button>
+            <button type="button" className="dossier-action" disabled title="Disponible prochainement">
+              Préparer une demande de devis — bientôt
+            </button>
+            <button type="button" className="dossier-action" onClick={() => setResult(null)}>
+              Modifier mes réponses
+            </button>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  const TOTAL_STEPS = 6;
+  const chips = buildSummaryChips(project);
+  const bathroomSelected = project.roomIds.includes('bathroom') || project.projectType === 'bathroom';
 
   return (
     <main className="v7-assistant">
       <header className="v7-assistant-header">
-        <span className="eyebrow">AETHERACCESS V7</span>
+        <span className="eyebrow">AETHERACCESS</span>
         <h1>Préparons votre projet.</h1>
         <p>Répondez à quelques questions. Nous structurons le reste, à relire et à confirmer.</p>
+        <div className="wizard-progress" role="progressbar" aria-valuenow={step} aria-valuemin={1} aria-valuemax={TOTAL_STEPS}>
+          <span className="wizard-progress-label">{step} / {TOTAL_STEPS}</span>
+          <div className="wizard-progress-bar"><span style={{ width: `${(step / TOTAL_STEPS) * 100}%` }} /></div>
+        </div>
       </header>
-      <section className="v7-step"><h2>1. Que souhaitez-vous faire ?</h2><div className="choice-grid">{PROJECT_TYPES.map((type) => <button type="button" className={project.projectType === type.id ? 'selected' : ''} key={type.id} onClick={() => update({ projectType: type.id })}>{type.label}<small>{type.description}</small></button>)}</div></section>
-      <section className="v7-step"><h2>2. Quel type de bien ?</h2><div className="choice-grid">{PROPERTY_TYPES.map((type) => <button type="button" className={project.propertyType === type.id ? 'selected' : ''} key={type.id} onClick={() => update({ propertyType: type.id })}>{type.label}</button>)}</div></section>
-      <section className="v7-step"><h2>3. Où se situe le projet ?</h2><LocationSelector value={project.location} onChange={(location) => update({ location })} /></section>
-      <section className="v7-step"><h2>4. Quelles pièces sont concernées ?</h2><div className="room-grid">{ROOMS.map((room) => <button type="button" className={project.roomIds.includes(room.id) ? 'selected' : ''} key={room.id} onClick={() => toggleRoom(room.id)}>{room.label}{room.defaultArea ? <small>≈ {room.defaultArea} m²</small> : null}</button>)}</div></section>
-      <section className="v7-step"><h2>5. Quels sont vos objectifs ?</h2><div className="choice-grid"><button type="button" className={project.objectives.includes('comfort') ? 'selected' : ''} onClick={() => toggleObjective('comfort')}>Améliorer le confort</button><button type="button" className={project.objectives.includes('energy') ? 'selected' : ''} onClick={() => toggleObjective('energy')}>Réduire les consommations</button><button type="button" className={project.objectives.includes('appearance') ? 'selected' : ''} onClick={() => toggleObjective('appearance')}>Moderniser l’apparence</button></div></section>
-      <section className="v7-step"><h2>6. Voici ce que nous avons compris</h2><div className="suggestion-grid">{suggestions.map((suggestion) => <SuggestionCard key={suggestion.id} suggestion={suggestion} />)}</div></section>
-      <section className="v7-step missing-information"><h2>Informations manquantes</h2>{missingInformation.length ? <ul>{missingInformation.map((item) => <li key={item.id}>{item.label}</li>)}</ul> : <p>Votre première synthèse est complète. Les métrés et points techniques restent à confirmer avec l’entreprise.</p>}</section>
-      <button type="button" className="primary-action" onClick={() => onSave?.({ ...project, suggestions, missingInformation })}>Enregistrer la première synthèse</button>
+
+      {chips.length ? (
+        <p className="wizard-summary">{chips.join(' · ')}</p>
+      ) : null}
+      {reassurance ? <p className="wizard-reassurance">{reassurance}</p> : null}
+
+      {step === 1 ? (
+        <section className="v7-step">
+          <h2>Votre projet — quel type de travaux ?</h2>
+          <div className="choice-grid">
+            {PROJECT_TYPES.map((type) => (
+              <button type="button" className={project.projectType === type.id ? 'selected' : ''} key={type.id}
+                onClick={() => { update({ projectType: type.id }); if (type.id === 'unknown') showReassurance(); }}>
+                {type.label}<small>{type.description}</small>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {step === 2 ? (
+        <section className="v7-step">
+          <h2>Votre logement — quel type de bien ?</h2>
+          <div className="choice-grid">
+            {PROPERTY_TYPES.map((type) => (
+              <button type="button" className={project.propertyType === type.id ? 'selected' : ''} key={type.id}
+                onClick={() => { update({ propertyType: type.id }); if (type.id === 'unknown') showReassurance(); }}>
+                {type.label}
+              </button>
+            ))}
+          </div>
+          <label className="wizard-field">
+            Surface approximative (facultatif)
+            <input type="number" min="0" value={project.surface} placeholder="Ex. 68"
+              onChange={(event) => update({ surface: event.target.value })} />
+            {project.surface ? <small>≈ {project.surface} m²</small> : null}
+          </label>
+        </section>
+      ) : null}
+
+      {step === 3 ? (
+        <section className="v7-step">
+          <h2>Localisation — où se trouve-t-il ?</h2>
+          <LocationSelector value={project.location} onChange={(location) => update({ location })} />
+        </section>
+      ) : null}
+
+      {step === 4 ? (
+        <section className="v7-step">
+          <h2>Quelles pièces sont concernées ?</h2>
+          <div className="room-grid">
+            {ROOMS.map((room) => (
+              <button type="button" className={project.roomIds.includes(room.id) ? 'selected' : ''} key={room.id}
+                onClick={() => toggle('roomIds', room.id)}>
+                {room.label}{room.defaultArea ? <small>≈ {room.defaultArea} m²</small> : null}
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {step === 5 ? (
+        <section className="v7-step">
+          <h2>Vos objectifs et l’existant</h2>
+          <div className="choice-grid">
+            {OBJECTIVES.map((objective) => (
+              <button type="button" className={project.objectives.includes(objective.id) ? 'selected' : ''} key={objective.id}
+                onClick={() => toggle('objectives', objective.id)}>
+                {objective.label}
+              </button>
+            ))}
+          </div>
+          <label className="wizard-field">
+            État actuel des installations
+            <select value={project.existingCondition} onChange={(event) => { update({ existingCondition: event.target.value }); if (event.target.value === 'unknown') showReassurance(); }}>
+              <option value="">Choisir</option>
+              {EXISTING_CONDITIONS.map((condition) => <option key={condition.id} value={condition.id}>{condition.label}</option>)}
+            </select>
+          </label>
+          {bathroomSelected ? (
+            <fieldset className="wizard-features">
+              <legend>Salle de bains — particularités (facultatif)</legend>
+              {BATHROOM_FEATURES.map((feature) => (
+                <label key={feature.id} className="wizard-checkbox">
+                  <input type="checkbox" checked={project.features.includes(feature.id)} onChange={() => toggle('features', feature.id)} />
+                  {feature.label}
+                </label>
+              ))}
+            </fieldset>
+          ) : null}
+        </section>
+      ) : null}
+
+      {step === 6 ? (
+        <>
+          <section className="v7-step">
+            <h2>Voici ce que nous avons compris</h2>
+            {lots.length ? (
+              <div className="work-lot-grid">
+                {lots.map((lot) => (
+                  <WorkLotCard key={lot.id} work={lot} onStatusChange={setWorkStatus} onNoteChange={setWorkNote} />
+                ))}
+              </div>
+            ) : (
+              <p className="brief-empty">Répondez aux étapes précédentes pour générer des suggestions — vous pourrez toutes les ajuster ici.</p>
+            )}
+          </section>
+          <MissingCenter items={missingItems} onComplete={completeMissing} onDismiss={dismissMissing} dismissedMessage={reassurance} />
+        </>
+      ) : null}
+
+      <nav className="wizard-nav">
+        {step > 1 ? (
+          <button type="button" className="wizard-nav-btn" onClick={() => setStep((current) => current - 1)}>
+            ← Étape précédente
+          </button>
+        ) : <span />}
+        {step < TOTAL_STEPS ? (
+          <button type="button" className="wizard-nav-btn next" onClick={() => setStep((current) => current + 1)}>
+            Étape suivante →
+          </button>
+        ) : (
+          <button type="button" className="primary-action" onClick={createDossier}>
+            Créer mon dossier projet →
+          </button>
+        )}
+      </nav>
     </main>
   );
 }
