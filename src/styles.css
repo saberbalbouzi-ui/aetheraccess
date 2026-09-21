@@ -99,8 +99,11 @@ button small { display: block; margin-top: 6px; color: #698073; font-size: 12px;
 .invite-form label { color: #48604f; font-size: 13px; font-weight: 600; }
 .invitation-list, .quote-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .invitation-list li { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; padding: 10px 12px; border: 1px solid #e4e9dc; border-radius: 10px; background: #fffffb; flex-wrap: wrap; }
+.invitation-list li.invitation-stale { border-color: #e0a33d; background: #fff8e9; }
 .invitation-list span { font-weight: 600; color: #173d31; font-size: 14px; }
 .invitation-list small { color: #698073; font-size: 12px; }
+.remind-action { padding: 6px 12px; border: 1px solid #e0a33d; border-radius: 999px; background: #fff; color: #8a6d1f; font-weight: 700; font-size: 12px; cursor: pointer; }
+.remind-action:hover { background: #fff3d6; }
 .quote-item { display: flex; justify-content: space-between; gap: 12px; padding: 12px; border: 1px solid #e4e9dc; border-radius: 10px; background: #fffffb; flex-wrap: wrap; }
 .quote-item > div { display: grid; gap: 4px; }
 .quote-item strong { color: #153c31; }
@@ -115,6 +118,7 @@ button small { display: block; margin-top: 6px; color: #698073; font-size: 12px;
 .quote-fields { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
 .quote-form label { display: grid; gap: 6px; color: #48604f; font-size: 13px; font-weight: 600; }
 .quote-form input, .quote-form textarea { width: 100%; padding: 12px 14px; color: #173d31; border: 1px solid #cfdcc9; border-radius: 12px; background: #fffffb; resize: vertical; }
+.quote-form input[type='file'] { padding: 10px; }
 
 /* --- V9 · Comparaison de devis --- */
 .comparison-wrap { overflow-x: auto; }
@@ -143,5 +147,12 @@ button small { display: block; margin-top: 6px; color: #698073; font-size: 12px;
 .report-list header small { color: #698073; font-size: 12px; }
 .report-list p { margin: 4px 0; color: #33473c; font-size: 14px; }
 .report-list em { color: #587064; font-style: normal; font-weight: 700; }
+
+/* --- V10 · Photos des comptes rendus --- */
+.report-photos { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.report-photo { padding: 0; border: 1px solid #dfe5d9; border-radius: 10px; background: none; cursor: zoom-in; overflow: hidden; }
+.report-photo img { display: block; width: 96px; height: 96px; object-fit: cover; }
+.photo-lightbox { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 24px; background: rgba(15, 32, 26, .85); cursor: zoom-out; }
+.photo-lightbox img { max-width: 100%; max-height: 100%; border-radius: 12px; }
 
 @media (max-width: 640px) { .v7-app-shell { padding: 18px 12px 50px; } .v7-assistant-header, .v7-step { padding: 22px 18px; border-radius: 18px; } .auth-row { flex-direction: column; } .action-form { grid-template-columns: 1fr; } }

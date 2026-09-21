@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { decideQuote, inviteContractor, listInvitations, listQuotesForBrief, listMyBriefs } from '../services/company-service';
 import { compareQuotes, openWorkSite } from '../services/site-service';
+import { buildReminderMailto, isStaleInvitation, markReminded } from '../services/photo-service';
 
 const QUOTE_STATUS = {
   submitted: 'Reçu',
@@ -9,6 +10,7 @@ const QUOTE_STATUS = {
 };
 
 const formatAmount = (value) => `${Number(value || 0).toLocaleString('fr-FR')} €`;
+const formatDate = (iso) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 
 // Tableau de comparaison structurée des devis d’un cahier des charges.
 function QuoteComparison({ briefId }) {
@@ -118,6 +120,13 @@ function BriefCard({ brief }) {
     refresh();
   };
 
+  // Relance : ouvre un e-mail pré-rempli et horodate la relance.
+  const remind = (invitation) => {
+    const projectTitle = brief.renovation_projects?.title || 'Projet de rénovation';
+    window.location.href = buildReminderMailto(invitation, brief.title, projectTitle);
+    markReminded(invitation.id).then(() => refresh());
+  };
+
   return (
     <article className="dashboard-card brief-card">
       <strong>{brief.title}</strong>
@@ -151,12 +160,21 @@ function BriefCard({ brief }) {
           <h3>Entreprises invitées</h3>
           {invitations.length ? (
             <ul className="invitation-list">
-              {invitations.map((invitation) => (
-                <li key={invitation.id}>
-                  <span>{invitation.profiles?.business_name || invitation.profiles?.full_name || invitation.invited_email || 'Entreprise'}</span>
-                  <small>{invitation.invited_email ? `${invitation.invited_email} · en attente de compte` : invitation.status === 'accepted' ? 'A accepté' : invitation.status === 'declined' ? 'A décliné' : 'Invitée'}</small>
-                </li>
-              ))}
+              {invitations.map((invitation) => {
+                const stale = isStaleInvitation(invitation);
+                return (
+                  <li key={invitation.id} className={stale ? 'invitation-stale' : ''}>
+                    <span>{invitation.profiles?.business_name || invitation.profiles?.full_name || invitation.invited_email || 'Entreprise'}</span>
+                    <small>
+                      {invitation.invited_email ? `${invitation.invited_email} · en attente de compte` : invitation.status === 'accepted' ? 'A accepté' : invitation.status === 'declined' ? 'A décliné' : 'Invitée'}
+                      {invitation.last_reminded_at ? ` · relancée le ${formatDate(invitation.last_reminded_at)}` : ''}
+                    </small>
+                    {stale ? (
+                      <button type="button" className="remind-action" onClick={() => remind(invitation)}>Relancer</button>
+                    ) : null}
+                  </li>
+                );
+              })}
             </ul>
           ) : <p className="brief-empty">Aucune entreprise invitée pour le moment.</p>}
 
