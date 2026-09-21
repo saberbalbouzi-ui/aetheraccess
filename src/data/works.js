@@ -1,0 +1,31 @@
+export const WORK_STATUSES = {
+  CONFIRMED: 'confirmed',
+  RECOMMENDED: 'recommended',
+  TO_CHECK: 'to-check',
+  NOT_APPLICABLE: 'not-applicable',
+};
+
+export const WORK_CATALOG = [
+  { id: 'protection', label: 'Protection du chantier', category: 'Préparation' },
+  { id: 'removal', label: 'Dépose / démolition', category: 'Préparation' },
+  { id: 'waste-removal', label: 'Évacuation des déchets', category: 'Préparation' },
+  { id: 'masonry', label: 'Maçonnerie / reprises', category: 'Structure' },
+  { id: 'partitions', label: 'Cloisons / doublage', category: 'Structure' },
+  { id: 'insulation', label: 'Isolation', category: 'Performance' },
+  { id: 'windows', label: 'Menuiseries', category: 'Performance' },
+  { id: 'heating', label: 'Chauffage', category: 'Performance' },
+  { id: 'ventilation', label: 'Ventilation', category: 'Performance' },
+  { id: 'waterproofing', label: 'Étanchéité', category: 'Technique' },
+  { id: 'electricity', label: 'Électricité', category: 'Technique' },
+  { id: 'lighting', label: 'Éclairage', category: 'Technique' },
+  { id: 'plumbing', label: 'Plomberie', category: 'Technique' },
+  { id: 'sanitary', label: 'Sanitaires', category: 'Technique' },
+  { id: 'kitchen', label: 'Cuisine', category: 'Technique' },
+  { id: 'painting', label: 'Peinture', category: 'Finitions' },
+  { id: 'flooring', label: 'Sols / parquet', category: 'Finitions' },
+  { id: 'tiling', label: 'Carrelage / faïence', category: 'Finitions' },
+  { id: 'facade', label: 'Façade', category: 'Extérieur' },
+  { id: 'roofing', label: 'Toiture / étanchéité extérieure', category: 'Extérieur' },
+  { id: 'terrace', label: 'Terrasse', category: 'Extérieur' },
+  { id: 'fencing', label: 'Clôture', category: 'Extérieur' },
+];
