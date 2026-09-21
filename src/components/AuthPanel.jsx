@@ -19,6 +19,21 @@ const ACCESS_MODES = {
   },
 };
 
+const PLATFORM_STEPS = [
+  {
+    title: 'Décrivez votre projet',
+    text: 'Un assistant guidé transforme vos réponses en cahier des charges clair, structuré et exportable (PDF, DOCX).',
+  },
+  {
+    title: 'Consultez les entreprises',
+    text: 'Publiez votre cahier des charges, invitez des professionnels et recevez leurs devis détaillés.',
+  },
+  {
+    title: 'Suivez le chantier',
+    text: 'Comparez les offres, choisissez votre entreprise et suivez l’avancement avec comptes rendus et photos.',
+  },
+];
+
 export default function AuthPanel({ session, profile }) {
   const [mode, setMode] = useState(null);
   const [email, setEmail] = useState('');
@@ -61,9 +76,16 @@ export default function AuthPanel({ session, profile }) {
 
   if (!mode) {
     return (
-      <section className="access-landing">
-        <h2>Bienvenue sur AetherAccess</h2>
-        <p>Choisissez votre accès pour continuer :</p>
+      <div className="access-landing">
+        <section className="access-hero">
+          <span className="eyebrow">AETHERACCESS</span>
+          <h1>Vos travaux, du projet au chantier.</h1>
+          <p>
+            AetherAccess accompagne particuliers et entreprises de rénovation :
+            cahier des charges guidé, mise en relation, devis comparés et suivi de chantier.
+          </p>
+        </section>
+
         <div className="access-grid">
           {Object.entries(ACCESS_MODES).map(([id, access]) => (
             <button key={id} type="button" className={`access-card access-${id}`} onClick={() => setMode(id)}>
@@ -73,7 +95,20 @@ export default function AuthPanel({ session, profile }) {
             </button>
           ))}
         </div>
-      </section>
+
+        <section className="platform-steps">
+          <h2>Comment ça marche ?</h2>
+          <div className="platform-steps-grid">
+            {PLATFORM_STEPS.map((step, index) => (
+              <article key={step.title} className="platform-step">
+                <span className="platform-step-number">{index + 1}</span>
+                <h3>{step.title}</h3>
+                <p>{step.text}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      </div>
     );
   }
 

@@ -31,7 +31,7 @@ const TABS = [
 ];
 
 export default function App() {
-  const [session, setSession] = useState(null);
+  const [session, setSession] = useState(undefined); // undefined = session en cours de vérification
   const [profile, setProfile] = useState(null);
   const [tab, setTab] = useState('assistant');
   const [currentProject, setCurrentProject] = useState(() => loadProjectFallback() || {});
@@ -41,7 +41,10 @@ export default function App() {
   const [copyState, setCopyState] = useState(false);
 
   useEffect(() => {
-    if (!supabaseConfigured) return undefined;
+    if (!supabaseConfigured) {
+      setSession(null);
+      return undefined;
+    }
     getCurrentSession().then(setSession);
     return onAuthStateChange(setSession);
   }, []);
@@ -132,6 +135,8 @@ export default function App() {
     }
   };
 
+  const isGuest = session === null;
+
   return (
     <div className="v7-app-shell">
       <header className="v7-topbar">
@@ -151,42 +156,50 @@ export default function App() {
           </nav>
         ) : null}
       </header>
-      <AuthPanel session={session} profile={profile} />
 
-      {tab === 'assistant' ? (
-        <ProjectWizard key={wizardKey} initialProject={currentProject} onSave={save} />
-      ) : null}
-      {tab === 'projects' && session?.user ? (
-        <Dashboard userId={session.user.id} onOpenProject={openProject} onNewProject={newProject} />
-      ) : null}
-      {tab === 'consultations' && session?.user ? (
-        <ConsultationsPanel userId={session.user.id} />
-      ) : null}
-      {tab === 'contractor' && session?.user && isContractor ? (
-        <ContractorSpace userId={session.user.id} email={session.user.email} />
-      ) : null}
-      {tab === 'sites' && session?.user ? (
-        <WorkSitesPanel userId={session.user.id} isContractor={isContractor} />
-      ) : null}
-      {tab === 'profile' && session?.user ? (
-        <ProfileSettings session={session} profile={profile} onProfileChange={setProfile} />
-      ) : null}
+      {isGuest ? (
+        // Page d'accueil publique : uniquement l'accès et la présentation de la plateforme.
+        <AuthPanel session={session} profile={profile} />
+      ) : (
+        // Espace dédié : toutes les fonctionnalités après connexion.
+        <>
+          <AuthPanel session={session} profile={profile} />
+          {tab === 'assistant' ? (
+            <ProjectWizard key={wizardKey} initialProject={currentProject} onSave={save} />
+          ) : null}
+          {tab === 'projects' && session?.user ? (
+            <Dashboard userId={session.user.id} onOpenProject={openProject} onNewProject={newProject} />
+          ) : null}
+          {tab === 'consultations' && session?.user ? (
+            <ConsultationsPanel userId={session.user.id} />
+          ) : null}
+          {tab === 'contractor' && session?.user && isContractor ? (
+            <ContractorSpace userId={session.user.id} email={session.user.email} />
+          ) : null}
+          {tab === 'sites' && session?.user ? (
+            <WorkSitesPanel userId={session.user.id} isContractor={isContractor} />
+          ) : null}
+          {tab === 'profile' && session?.user ? (
+            <ProfileSettings session={session} profile={profile} onProfileChange={setProfile} />
+          ) : null}
 
-      {syncState && tab === 'assistant' ? <p className={`sync-status sync-${syncState}`}>{SYNC_LABELS[syncState]}</p> : null}
-      {dossier && tab === 'assistant' ? (
-        <section className="v7-dossier">
-          <h2>Dossier projet</h2>
-          <pre>{dossier}</pre>
-          <div className="dossier-actions">
-            <button type="button" className="dossier-action primary" onClick={copyDossier}>{copyState ? 'Copié ✓' : 'Copier'}</button>
-            <button type="button" className="dossier-action" onClick={() => exportDossierPdf(currentProject)}>PDF</button>
-            <button type="button" className="dossier-action" onClick={() => exportDossierDocx(currentProject)}>DOCX</button>
-            <button type="button" className="dossier-action" onClick={() => exportDossierTxt(currentProject)}>TXT</button>
-          </div>
-          <PublishPanel project={currentProject} session={session} onPublished={() => setTab('consultations')} />
-          <small className="dossier-note">Document à relire et à confirmer avec l’entreprise avant utilisation.</small>
-        </section>
-      ) : null}
+          {syncState && tab === 'assistant' ? <p className={`sync-status sync-${syncState}`}>{SYNC_LABELS[syncState]}</p> : null}
+          {dossier && tab === 'assistant' ? (
+            <section className="v7-dossier">
+              <h2>Dossier projet</h2>
+              <pre>{dossier}</pre>
+              <div className="dossier-actions">
+                <button type="button" className="dossier-action primary" onClick={copyDossier}>{copyState ? 'Copié ✓' : 'Copier'}</button>
+                <button type="button" className="dossier-action" onClick={() => exportDossierPdf(currentProject)}>PDF</button>
+                <button type="button" className="dossier-action" onClick={() => exportDossierDocx(currentProject)}>DOCX</button>
+                <button type="button" className="dossier-action" onClick={() => exportDossierTxt(currentProject)}>TXT</button>
+              </div>
+              <PublishPanel project={currentProject} session={session} onPublished={() => setTab('consultations')} />
+              <small className="dossier-note">Document à relire et à confirmer avec l’entreprise avant utilisation.</small>
+            </section>
+          ) : null}
+        </>
+      )}
     </div>
   );
 }
