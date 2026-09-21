@@ -3,6 +3,7 @@ import ProjectWizard from './components/ProjectWizard';
 import AuthPanel from './components/AuthPanel';
 import Dashboard from './components/Dashboard';
 import { generateProjectDossier } from './services/dossier-generator';
+import { exportDossierDocx, exportDossierPdf, exportDossierTxt } from './services/export-service';
 import { clearProjectFallback, loadProjectFallback, saveProjectCloud, saveProjectFallback } from './services/project-service';
 import { getCurrentSession, onAuthStateChange } from './services/auth-service';
 import { supabaseConfigured } from './lib/supabase';
@@ -21,6 +22,7 @@ export default function App() {
   const [dossier, setDossier] = useState('');
   const [syncState, setSyncState] = useState(null);
   const [showDashboard, setShowDashboard] = useState(false);
+  const [copyState, setCopyState] = useState(false);
 
   useEffect(() => {
     if (!supabaseConfigured) return undefined;
@@ -31,6 +33,7 @@ export default function App() {
   const save = async (project) => {
     saveProjectFallback(project);
     setDossier(generateProjectDossier(project));
+    setCopyState(false);
     if (session?.user) {
       setSyncState('saving');
       const { project: saved, error } = await saveProjectCloud(project, session.user.id);
@@ -65,6 +68,16 @@ export default function App() {
     setWizardKey((key) => key + 1);
   };
 
+  const copyDossier = async () => {
+    try {
+      await navigator.clipboard?.writeText(dossier);
+      setCopyState(true);
+      setTimeout(() => setCopyState(false), 2500);
+    } catch {
+      setCopyState(false);
+    }
+  };
+
   return (
     <div className="v7-app-shell">
       <header className="v7-topbar">
@@ -82,7 +95,19 @@ export default function App() {
         <ProjectWizard key={wizardKey} initialProject={currentProject} onSave={save} />
       )}
       {syncState ? <p className={`sync-status sync-${syncState}`}>{SYNC_LABELS[syncState]}</p> : null}
-      {dossier ? <section className="v7-dossier"><h2>Dossier projet</h2><pre>{dossier}</pre></section> : null}
+      {dossier ? (
+        <section className="v7-dossier">
+          <h2>Dossier projet</h2>
+          <pre>{dossier}</pre>
+          <div className="dossier-actions">
+            <button type="button" className="dossier-action primary" onClick={copyDossier}>{copyState ? 'Copié ✓' : 'Copier'}</button>
+            <button type="button" className="dossier-action" onClick={() => exportDossierPdf(currentProject)}>PDF</button>
+            <button type="button" className="dossier-action" onClick={() => exportDossierDocx(currentProject)}>DOCX</button>
+            <button type="button" className="dossier-action" onClick={() => exportDossierTxt(currentProject)}>TXT</button>
+          </div>
+          <small className="dossier-note">Document à relire et à confirmer avec l’entreprise avant utilisation.</small>
+        </section>
+      ) : null}
     </div>
   );
 }
