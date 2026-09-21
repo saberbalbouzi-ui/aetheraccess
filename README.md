@@ -1,6 +1,6 @@
-# AetherAccess V8
+# AetherAccess V9
 
-Assistant guidé de structuration de projets de rénovation, avec boucle complète **particulier ↔ entreprise** : le particulier prépare son dossier, le publie en consultation, invite des entreprises et reçoit leurs devis.
+Assistant guidé de structuration de projets de rénovation, avec boucle complète **particulier ↔ entreprise** : préparation du dossier, consultation d’entreprises, comparaison de devis, puis suivi de chantier partagé.
 
 ## Fonctionnalités
 
@@ -12,8 +12,10 @@ Assistant guidé de structuration de projets de rénovation, avec boucle complè
 - Connexion par e-mail (lien magique) via Supabase Auth.
 - Sauvegarde cloud des projets avec fallback localStorage.
 - Tableau de bord « Mes projets » : liste, ouverture, suppression.
-- **Consultations entreprises** : publication du dossier en cahier des charges, invitation d’entreprises par e-mail, suivi des devis reçus, acceptation/refus.
-- **Espace entreprise** : invitations reçues (y compris avant création du compte), consultation du dossier client, devis chiffré (montant, délai, notes) en brouillon puis envoi.
+- **Consultations entreprises** : publication du dossier en cahier des charges, invitation d’entreprises par e-mail, devis reçus, acceptation/refus.
+- **Comparaison de devis structurée** : tableau montant / délai / postes chiffrés, repères « le moins cher » et « le plus rapide » (sans désigner automatiquement une meilleure offre).
+- **Espace entreprise** : invitations reçues (y compris avant création du compte), dossier client, devis chiffré (montant, délai, notes).
+- **Suivi chantier partagé** : ouverture automatique à l’acceptation d’un devis, comptes rendus (avancement, problèmes, prochaines étapes) et actions avec échéances, visibles des deux côtés ; le particulier pilote le statut (en cours / suspendu / terminé).
 - Profil utilisateur : rôle particulier / entreprise, annuaire des entreprises.
 
 ## Configuration Supabase
@@ -25,7 +27,7 @@ Assistant guidé de structuration de projets de rénovation, avec boucle complè
    - Redirect URLs : ajouter le domaine Vercel et `http://localhost:5173/**`.
 4. Vérifier que le provider « Email » est activé (Authentication → Providers).
 
-Les données sont protégées par le RLS : chaque utilisateur ne voit que ses propres projets ; une entreprise ne voit que les cahiers des charges sur lesquels elle est invitée et qu’elle a acceptés. Les invitations par e-mail sont rattachées automatiquement au compte à la première connexion (trigger `handle_new_user`).
+Les données sont protégées par le RLS : chaque utilisateur ne voit que ses propres projets ; une entreprise ne voit que les consultations acceptées et les chantiers dont elle est titulaire ; comptes rendus et actions sont partagés entre le particulier et l’entreprise du chantier. Les invitations par e-mail sont rattachées automatiquement au compte à la première connexion (trigger `handle_new_user`).
 
 ## Développement
 
@@ -36,4 +38,4 @@ npm run dev
 
 Les exports PDF/DOCX sont générés côté navigateur (`jspdf`, `docx`) à partir du dossier structuré — aucun serveur requis.
 
-Les suggestions techniques sont des pistes à confirmer avec l’entreprise. Les fourchettes et surfaces affichées sont des repères de planification, pas des prix de travaux.
+Les suggestions techniques sont des pistes à confirmer avec l’entreprise. Les fourchettes, surfaces et comparaisons affichées sont des repères de planification, pas des prix de travaux.

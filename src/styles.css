@@ -116,4 +116,32 @@ button small { display: block; margin-top: 6px; color: #698073; font-size: 12px;
 .quote-form label { display: grid; gap: 6px; color: #48604f; font-size: 13px; font-weight: 600; }
 .quote-form input, .quote-form textarea { width: 100%; padding: 12px 14px; color: #173d31; border: 1px solid #cfdcc9; border-radius: 12px; background: #fffffb; resize: vertical; }
 
-@media (max-width: 640px) { .v7-app-shell { padding: 18px 12px 50px; } .v7-assistant-header, .v7-step { padding: 22px 18px; border-radius: 18px; } .auth-row { flex-direction: column; } }
+/* --- V9 · Comparaison de devis --- */
+.comparison-wrap { overflow-x: auto; }
+.comparison-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.comparison-table th { padding: 10px 12px; text-align: left; color: #587064; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; border-bottom: 2px solid #dfe5d9; }
+.comparison-table td { padding: 12px; border-bottom: 1px solid #e4e9dc; color: #173d31; vertical-align: top; }
+.comparison-table tr.quote-accepted td { background: #eef7e8; }
+.comparison-flag { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: #c9ef68; color: #153c31; font-size: 11px; font-weight: 800; }
+.comparison-note { margin: 10px 0 0; color: #698073; font-size: 12px; }
+
+/* --- V9 · Suivi chantier --- */
+.site-tracker .dashboard-header h3 { margin: 0; }
+.site-status-select { padding: 8px 12px; border: 1px solid #cfdcc9; border-radius: 999px; background: #fffffb; color: #173d31; font-weight: 700; font-size: 13px; }
+.action-form { display: grid; gap: 8px; grid-template-columns: 1fr auto auto; }
+.action-form input { padding: 11px 13px; border: 1px solid #cfdcc9; border-radius: 12px; background: #fffffb; color: #173d31; }
+.action-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.action-list li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 12px; border: 1px solid #e4e9dc; border-radius: 10px; background: #fffffb; }
+.action-list li.done { opacity: .55; }
+.action-list li.done span { text-decoration: line-through; }
+.action-list label { display: flex; gap: 10px; align-items: center; cursor: pointer; color: #173d31; font-size: 14px; }
+.action-list small { color: #698073; font-size: 12px; white-space: nowrap; }
+.report-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.report-list li { padding: 14px 16px; border: 1px solid #e4e9dc; border-left: 4px solid #8ebd4b; border-radius: 12px; background: #fffffb; }
+.report-list header { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.report-list header strong { color: #153c31; font-size: 14px; }
+.report-list header small { color: #698073; font-size: 12px; }
+.report-list p { margin: 4px 0; color: #33473c; font-size: 14px; }
+.report-list em { color: #587064; font-style: normal; font-weight: 700; }
+
+@media (max-width: 640px) { .v7-app-shell { padding: 18px 12px 50px; } .v7-assistant-header, .v7-step { padding: 22px 18px; border-radius: 18px; } .auth-row { flex-direction: column; } .action-form { grid-template-columns: 1fr; } }
