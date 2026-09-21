@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import ProjectWizard from './components/ProjectWizard';
-import AuthPanel from './components/AuthPanel';
+import AuthPanel, { SIGNUP_ROLE_KEY } from './components/AuthPanel';
 import Dashboard from './components/Dashboard';
 import ProfileSettings from './components/ProfileSettings';
 import PublishPanel from './components/PublishPanel';
@@ -11,7 +11,7 @@ import { generateProjectDossier } from './services/dossier-generator';
 import { exportDossierDocx, exportDossierPdf, exportDossierTxt } from './services/export-service';
 import { clearProjectFallback, loadProjectFallback, saveProjectCloud, saveProjectFallback } from './services/project-service';
 import { getCurrentSession, onAuthStateChange } from './services/auth-service';
-import { getMyProfile } from './services/company-service';
+import { getMyProfile, registerInDirectory, updateMyProfile } from './services/company-service';
 import { supabaseConfigured } from './lib/supabase';
 
 const SYNC_LABELS = {
@@ -59,6 +59,27 @@ export default function App() {
       setTab('assistant');
     }
   }, [session, refreshProfile]);
+
+  // Applique l'intention choisie sur l'écran d'accueil (particulier / entreprise)
+  // dès que le profil est chargé, sans jamais écraser un rôle déjà défini.
+  useEffect(() => {
+    if (!session?.user || !profile) return;
+    const intent = localStorage.getItem(SIGNUP_ROLE_KEY);
+    if (!intent || profile.role) return;
+    localStorage.removeItem(SIGNUP_ROLE_KEY);
+    (async () => {
+      await updateMyProfile(session.user.id, {
+        fullName: profile.full_name,
+        businessName: profile.business_name,
+        role: intent,
+      });
+      if (intent === 'entreprise') {
+        await registerInDirectory(session.user.id, session.user.email, profile.business_name);
+      }
+      await refreshProfile(session.user.id);
+      setTab(intent === 'entreprise' ? 'contractor' : 'assistant');
+    })();
+  }, [session, profile, refreshProfile]);
 
   const isContractor = profile?.role === 'entreprise';
   const visibleTabs = TABS.filter((item) => !item.contractorOnly || isContractor);
@@ -130,7 +151,7 @@ export default function App() {
           </nav>
         ) : null}
       </header>
-      <AuthPanel session={session} />
+      <AuthPanel session={session} profile={profile} />
 
       {tab === 'assistant' ? (
         <ProjectWizard key={wizardKey} initialProject={currentProject} onSave={save} />
