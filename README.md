@@ -5,6 +5,7 @@ Assistant guidé de structuration de projets de rénovation : l’utilisateur r�
 ## Fonctionnalités
 
 - Wizard guidé : type de projet, type de bien, localisation, pièces, objectifs.
+- Localisation hiérarchique non bloquante : Région → Département → Commune → Code postal (API officielle geo.api.gouv.fr), avec option « Je ne connais pas encore la ville ».
 - Moteur de suggestions de lots avec statuts (Confirmé, Conseillé, À vérifier).
 - Détection des informations manquantes.
 - Génération d’un dossier projet structuré.

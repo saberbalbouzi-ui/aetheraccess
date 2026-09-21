@@ -3,7 +3,7 @@
 :root { font-family: 'Manrope', sans-serif; color: #14352b; background: #f5f5ec; }
 * { box-sizing: border-box; }
 body { margin: 0; background: #f5f5ec; }
-button, input { font: inherit; }
+button, input, select { font: inherit; }
 .v7-app-shell { max-width: 1180px; margin: 0 auto; padding: 40px 20px 80px; }
 .v7-assistant { display: grid; gap: 22px; }
 .v7-assistant-header { padding: 42px 38px; border-radius: 28px; background: #153c31; color: #f4f4ea; }
@@ -16,9 +16,22 @@ h2 { margin: 0 0 16px; font-size: 22px; }
 .choice-grid button, .room-grid button { min-height: 64px; padding: 16px; color: #173d31; border: 1px solid #d8e2d1; border-radius: 16px; background: #fafbf4; text-align: left; cursor: pointer; }
 .choice-grid button:hover, .room-grid button:hover, .choice-grid button.selected, .room-grid button.selected { border-color: #8ebd4b; background: #eff8d9; }
 button small { display: block; margin-top: 6px; color: #698073; font-size: 12px; }
-.location-selector { display: grid; gap: 10px; max-width: 560px; }
-.location-selector input[type='text'], .location-selector input:not([type]) { width: 100%; padding: 14px 16px; border: 1px solid #cfdcc9; border-radius: 12px; }
+
+/* --- Localisation --- */
+.location-selector { display: grid; gap: 14px; }
+.location-grid { display: grid; gap: 12px; max-width: 620px; }
+.location-grid label { display: grid; gap: 6px; color: #48604f; font-size: 13px; font-weight: 600; }
+.location-grid select, .location-grid input { width: 100%; padding: 13px 15px; color: #173d31; border: 1px solid #cfdcc9; border-radius: 12px; background: #fffffb; }
+.location-grid select:disabled, .location-grid input:disabled { background: #eef2e4; color: #8fa096; }
 .location-unknown { display: flex; gap: 8px; align-items: center; color: #587064; font-size: 14px; }
+.location-city { position: relative; }
+.commune-results { position: absolute; z-index: 20; top: 100%; left: 0; right: 0; margin: 4px 0 0; padding: 6px; list-style: none; border: 1px solid #cfdcc9; border-radius: 12px; background: #fffffb; box-shadow: 0 12px 30px rgba(20, 53, 43, .12); }
+.commune-results button { display: flex; justify-content: space-between; gap: 10px; width: 100%; padding: 10px 12px; border: 0; border-radius: 8px; background: transparent; color: #173d31; text-align: left; cursor: pointer; }
+.commune-results button:hover { background: #eff8d9; }
+.commune-results small { margin: 0; }
+.location-postal-auto { margin: 0; color: #2f7d4f; font-size: 13px; font-weight: 700; }
+.location-error { color: #b34a2b; font-weight: 500; }
+
 .suggestion-card { display: grid; gap: 5px; min-height: 112px; padding: 16px; border-left: 5px solid #9dbd67; border-radius: 14px; background: #f3f7e9; }
 .suggestion-card span, .suggestion-card small { color: #60796d; font-size: 12px; }
 .suggestion-confirmed { border-color: #4e9c65; }
