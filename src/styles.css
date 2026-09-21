@@ -3,7 +3,7 @@
 :root { font-family: 'Manrope', sans-serif; color: #14352b; background: #f5f5ec; }
 * { box-sizing: border-box; }
 body { margin: 0; background: #f5f5ec; }
-button, input, select { font: inherit; }
+button, input, select, textarea { font: inherit; }
 .v7-app-shell { max-width: 1180px; margin: 0 auto; padding: 40px 20px 80px; }
 .v7-assistant { display: grid; gap: 22px; }
 .v7-assistant-header { padding: 42px 38px; border-radius: 28px; background: #153c31; color: #f4f4ea; }
@@ -47,10 +47,17 @@ button small { display: block; margin-top: 6px; color: #698073; font-size: 12px;
 .dossier-action:hover { background: #f4f4ea1f; }
 .dossier-action.primary { border: 0; background: #c9ef68; color: #153c31; }
 .dossier-note { display: block; margin-top: 14px; color: #b9cfc2; font-size: 12px; }
+.publish-panel { margin-top: 18px; padding-top: 16px; border-top: 1px solid #f4f4ea2e; }
+.publish-hint { margin-top: 14px; color: #b9cfc2; font-size: 13px; }
+.publish-error { color: #ffb59e; }
 
 /* --- V7.1 · Connexion Supabase --- */
-.v7-topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.v7-topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
 .v7-topbar .brand { font: italic 600 24px 'Playfair Display', serif; color: #153c31; }
+.v7-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.v7-tab { padding: 10px 16px; border: 1px solid #d8e2d1; border-radius: 999px; background: #fffffb; color: #48604f; font-weight: 700; font-size: 13px; cursor: pointer; }
+.v7-tab:hover { border-color: #8ebd4b; }
+.v7-tab.active { border-color: #153c31; background: #153c31; color: #f4f4ea; }
 .auth-panel { margin-bottom: 22px; padding: 16px 18px; border: 1px solid #dfe5d9; border-radius: 16px; background: #fffffb; }
 .auth-panel label { display: block; margin-bottom: 10px; color: #48604f; font-size: 13px; font-weight: 600; }
 .auth-row { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -70,14 +77,43 @@ button small { display: block; margin-top: 6px; color: #698073; font-size: 12px;
 .sync-error { background: #fbe3da; color: #b34a2b; }
 .v7-dashboard .dashboard-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
 .v7-dashboard .dashboard-header h2 { margin: 0; }
-.dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
-.dashboard-card { display: grid; gap: 6px; padding: 18px; border: 1px solid #d8e2d1; border-radius: 16px; background: #fafbf4; }
+.dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.dashboard-card { display: grid; gap: 6px; align-content: start; padding: 18px; border: 1px solid #d8e2d1; border-radius: 16px; background: #fafbf4; }
 .dashboard-card strong { color: #153c31; }
 .dashboard-card small { color: #698073; font-size: 12px; }
-.dashboard-actions { display: flex; gap: 8px; margin-top: 8px; }
+.dashboard-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
 .dashboard-actions button { padding: 8px 14px; border: 1px solid #cfdcc9; border-radius: 999px; background: #fffffb; color: #173d31; font-weight: 700; font-size: 13px; cursor: pointer; }
 .dashboard-actions button:hover { border-color: #8ebd4b; background: #eff8d9; }
 .dashboard-actions button.danger { color: #b34a2b; }
 .dashboard-actions button.danger:hover { border-color: #b34a2b; background: #fbe3da; }
+
+/* --- V8 · Espace entreprise --- */
+.profile-form { display: grid; gap: 14px; max-width: 560px; }
+.profile-form label { display: grid; gap: 6px; color: #48604f; font-size: 13px; font-weight: 600; }
+.profile-form input, .profile-form select { width: 100%; padding: 13px 15px; color: #173d31; border: 1px solid #cfdcc9; border-radius: 12px; background: #fffffb; }
+.profile-hint { color: #587064; font-size: 13px; }
+.brief-detail { margin-top: 14px; padding-top: 14px; border-top: 1px solid #dfe5d9; display: grid; gap: 14px; }
+.brief-detail h3, .brief-detail h4 { margin: 0; color: #153c31; font-size: 15px; }
+.brief-empty { margin: 0; color: #698073; font-size: 13px; }
+.invite-form { display: grid; gap: 8px; }
+.invite-form label { color: #48604f; font-size: 13px; font-weight: 600; }
+.invitation-list, .quote-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.invitation-list li { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; padding: 10px 12px; border: 1px solid #e4e9dc; border-radius: 10px; background: #fffffb; flex-wrap: wrap; }
+.invitation-list span { font-weight: 600; color: #173d31; font-size: 14px; }
+.invitation-list small { color: #698073; font-size: 12px; }
+.quote-item { display: flex; justify-content: space-between; gap: 12px; padding: 12px; border: 1px solid #e4e9dc; border-radius: 10px; background: #fffffb; flex-wrap: wrap; }
+.quote-item > div { display: grid; gap: 4px; }
+.quote-item strong { color: #153c31; }
+.quote-item small { color: #698073; font-size: 12px; }
+.quote-accepted { border-color: #4e9c65; background: #eef7e8; }
+.quote-rejected { opacity: .65; }
+.brief-facts { display: grid; gap: 8px; margin: 0; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.brief-facts div { padding: 10px 12px; border: 1px solid #e4e9dc; border-radius: 10px; background: #fffffb; }
+.brief-facts dt { margin: 0 0 4px; color: #698073; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.brief-facts dd { margin: 0; color: #153c31; font-weight: 600; font-size: 14px; }
+.quote-form { display: grid; gap: 12px; }
+.quote-fields { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.quote-form label { display: grid; gap: 6px; color: #48604f; font-size: 13px; font-weight: 600; }
+.quote-form input, .quote-form textarea { width: 100%; padding: 12px 14px; color: #173d31; border: 1px solid #cfdcc9; border-radius: 12px; background: #fffffb; resize: vertical; }
 
 @media (max-width: 640px) { .v7-app-shell { padding: 18px 12px 50px; } .v7-assistant-header, .v7-step { padding: 22px 18px; border-radius: 18px; } .auth-row { flex-direction: column; } }
