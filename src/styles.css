@@ -17,10 +17,10 @@ h2 { margin: 0 0 16px; font-size: 22px; }
 .choice-grid button:hover, .room-grid button:hover, .choice-grid button.selected, .room-grid button.selected { border-color: #8ebd4b; background: #eff8d9; }
 button small { display: block; margin-top: 6px; color: #698073; font-size: 12px; }
 
-/* --- V11 · Accès différenciés particulier / entreprise --- */
-.access-landing { margin-bottom: 22px; }
-.access-landing h2 { margin: 0 0 6px; color: #153c31; }
-.access-landing > p { margin: 0 0 16px; color: #587064; font-size: 14px; }
+/* --- V11 · Page d'accueil : accès + présentation --- */
+.access-landing { display: grid; gap: 26px; }
+.access-hero { padding: 46px 40px; border-radius: 28px; background: #153c31; color: #f4f4ea; }
+.access-hero p { max-width: 620px; margin: 0; color: #d9e8d9; font-size: 15px; line-height: 1.6; }
 .access-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
 .access-card { display: grid; gap: 10px; align-content: start; padding: 26px 24px; text-align: left; border: 1px solid #d8e2d1; border-radius: 20px; background: #fffffb; cursor: pointer; transition: border-color .15s ease, background .15s ease, transform .15s ease; }
 .access-card:hover { border-color: #8ebd4b; background: #f6fae9; transform: translateY(-2px); }
@@ -29,6 +29,13 @@ button small { display: block; margin-top: 6px; color: #698073; font-size: 12px;
 .access-cta { color: #2f7d4f; font-weight: 800; font-size: 13px; }
 .access-entreprise { border-top: 4px solid #153c31; }
 .access-particulier { border-top: 4px solid #c9ef68; }
+.platform-steps { padding: 26px; border: 1px solid #dfe5d9; border-radius: 22px; background: #fffffb; }
+.platform-steps h2 { margin: 0 0 18px; color: #153c31; }
+.platform-steps-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.platform-step { padding: 18px; border: 1px solid #e4e9dc; border-radius: 16px; background: #fafbf4; }
+.platform-step-number { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: #c9ef68; color: #153c31; font-weight: 800; font-size: 14px; }
+.platform-step h3 { margin: 12px 0 6px; color: #153c31; font-size: 15px; }
+.platform-step p { margin: 0; color: #587064; font-size: 13px; line-height: 1.55; }
 .auth-back { margin: 0 0 12px; padding: 0; border: 0; background: none; color: #587064; font-weight: 700; font-size: 13px; cursor: pointer; }
 .auth-back:hover { color: #153c31; }
 .auth-mode-badge { display: inline-block; width: fit-content; margin-bottom: 10px; padding: 4px 12px; border-radius: 999px; background: #eff8d9; color: #2f7d4f; font-size: 12px; font-weight: 800; }
