@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { ROOMS } from '../data/rooms';
+import { formatLocationLabel } from './location-service';
 
 const STORAGE_KEY = 'aetheraccess_v7_project';
 
@@ -27,8 +28,7 @@ const roomLabel = (id) => ROOMS.find((room) => room.id === id)?.label || id;
 const roomArea = (id) => ROOMS.find((room) => room.id === id)?.defaultArea ?? null;
 
 function locationLabel(location = {}) {
-  if (location.unknown) return null;
-  return location.city?.trim() || null;
+  return formatLocationLabel(location) || null;
 }
 
 function safeTitle(name) {

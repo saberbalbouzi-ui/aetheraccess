@@ -5,6 +5,15 @@ const labelStatus = {
   'not-applicable': 'Non concerné',
 };
 
+function locationLine(location = {}) {
+  if (location.unknown) return 'Localisation : À définir';
+  const parts = [];
+  if (location.city) parts.push(location.postalCode ? `${location.city} (${location.postalCode})` : location.city);
+  if (location.departmentName) parts.push(location.departmentName);
+  if (location.regionName) parts.push(location.regionName);
+  return `Localisation : ${parts.length ? parts.join(', ') : 'À préciser'}`;
+}
+
 export function generateProjectDossier(project = {}) {
   const lines = [
     'DOSSIER PROJET AETHERACCESS',
@@ -15,7 +24,7 @@ export function generateProjectDossier(project = {}) {
     `Type de bien : ${project.propertyType || 'À préciser'}`,
     '',
     '2. LOCALISATION',
-    project.location?.unknown ? 'Localisation : À définir' : `Localisation : ${project.location?.city || 'À préciser'}`,
+    locationLine(project.location),
     '',
     '3. PIÈCES CONCERNÉES',
     ...(project.roomIds?.length ? project.roomIds.map((room) => `- ${room}`) : ['- À préciser']),
@@ -35,5 +44,5 @@ export function generateProjectDossier(project = {}) {
     '- Relire et valider le dossier.',
     '- Préparer une demande de devis.',
   ];
-  return lines.join('\\n');
+  return lines.join('\n');
 }
