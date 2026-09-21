@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { sendMagicLink, signOut } from '../services/auth-service';
 import { supabaseConfigured } from '../lib/supabase';
 
@@ -34,11 +34,30 @@ const PLATFORM_STEPS = [
   },
 ];
 
+// Détecte un retour d'erreur Supabase dans l'URL (ex. lien expiré ou déjà utilisé)
+// et nettoie le hash pour ne pas garder #error=access_denied dans la barre d'adresse.
+function readAuthUrlError() {
+  if (typeof window === 'undefined') return null;
+  const hash = window.location.hash || '';
+  if (!hash.includes('error')) return null;
+  const params = new URLSearchParams(hash.replace(/^#/, ''));
+  if (!params.get('error')) return null;
+  window.history.replaceState(null, '', window.location.pathname + window.location.search);
+  return params.get('error_code') === 'otp_expired'
+    ? 'Ce lien de connexion a expiré ou a déjà été utilisé. Redemandez un lien ci-dessous et ouvrez le message le plus récent.'
+    : 'Connexion impossible. Redemandez un lien ci-dessous.';
+}
+
 export default function AuthPanel({ session, profile }) {
   const [mode, setMode] = useState(null);
   const [email, setEmail] = useState('');
   const [state, setState] = useState('idle'); // idle | sending | sent | error
   const [message, setMessage] = useState('');
+  const [urlError, setUrlError] = useState(null);
+
+  useEffect(() => {
+    setUrlError(readAuthUrlError());
+  }, []);
 
   if (!supabaseConfigured) {
     return <p className="auth-panel auth-offline">Sauvegarde locale uniquement — Supabase non configuré.</p>;
@@ -63,6 +82,7 @@ export default function AuthPanel({ session, profile }) {
     if (!email.trim()) return;
     setState('sending');
     setMessage('');
+    setUrlError(null);
     const { error } = await sendMagicLink(email.trim());
     if (error) {
       setState('error');
@@ -70,13 +90,16 @@ export default function AuthPanel({ session, profile }) {
     } else {
       if (mode) localStorage.setItem(SIGNUP_ROLE_KEY, mode);
       setState('sent');
-      setMessage('Lien envoyé. Vérifiez votre boîte mail pour vous connecter.');
+      setMessage('Lien envoyé. Vérifiez votre boîte mail et ouvrez le message le plus récent.');
     }
   };
+
+  const errorBanner = urlError ? <p className="auth-url-error">{urlError}</p> : null;
 
   if (!mode) {
     return (
       <div className="access-landing">
+        {errorBanner}
         <section className="access-hero">
           <span className="eyebrow">AETHERACCESS</span>
           <h1>Vos travaux, du projet au chantier.</h1>
@@ -123,6 +146,7 @@ export default function AuthPanel({ session, profile }) {
         ← Changer d’accès
       </button>
       <span className="auth-mode-badge">{current.title}</span>
+      {errorBanner}
       <label htmlFor="auth-email">{current.formLabel}</label>
       <div className="auth-row">
         <input
