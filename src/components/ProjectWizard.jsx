@@ -6,6 +6,7 @@ import { getMissingItems, countOpenMissing, REASSURANCE_MESSAGE } from '../servi
 import WorkLotCard from './WorkLotCard';
 import MissingCenter from './MissingCenter';
 import LocationSelector from './LocationSelector';
+import ConsultationPrep from './ConsultationPrep';
 
 const EXISTING_CONDITIONS = [
   { id: 'good', label: 'Bon état' },
@@ -46,7 +47,7 @@ function resultHeadline(project) {
   return parts.join(' · ') || 'Votre projet';
 }
 
-export default function ProjectWizard({ initialProject = {}, onSave }) {
+export default function ProjectWizard({ initialProject = {}, session, onSave, onGoToConsultations }) {
   const [project, setProject] = useState({
     name: '',
     projectType: '',
@@ -65,6 +66,7 @@ export default function ProjectWizard({ initialProject = {}, onSave }) {
   const [step, setStep] = useState(1);
   const [reassurance, setReassurance] = useState('');
   const [result, setResult] = useState(null);
+  const [view, setView] = useState('wizard'); // wizard | result | consultation
 
   const suggestions = useMemo(() => suggestWorks(project), [project]);
   // Les choix utilisateur priment toujours sur la suggestion du moteur.
@@ -77,6 +79,11 @@ export default function ProjectWizard({ initialProject = {}, onSave }) {
     [suggestions, project.workStatuses, project.workNotes],
   );
   const missingItems = useMemo(() => getMissingItems(project, project.missingDismissed), [project]);
+
+  const finalProject = useMemo(
+    () => ({ ...project, suggestions: lots, missingInformation: missingItems }),
+    [project, lots, missingItems],
+  );
 
   const update = (patch) => {
     setProject((current) => ({ ...current, ...patch }));
@@ -99,6 +106,7 @@ export default function ProjectWizard({ initialProject = {}, onSave }) {
   // « Je ne sais pas » conserve l'élément comme point à vérifier plus tard.
   const completeMissing = (item) => {
     const targetStep = Number(String(item.source || '').replace('step-', '')) || 1;
+    setView('wizard');
     setStep(targetStep);
   };
   const dismissMissing = (item) => {
@@ -107,7 +115,6 @@ export default function ProjectWizard({ initialProject = {}, onSave }) {
   };
 
   const createDossier = () => {
-    const finalProject = { ...project, suggestions: lots, missingInformation: missingItems };
     onSave?.(finalProject);
     setResult({
       headline: resultHeadline(finalProject),
@@ -116,11 +123,34 @@ export default function ProjectWizard({ initialProject = {}, onSave }) {
       toVerify: lots.filter((lot) => lot.status === 'to-check').length,
       missing: countOpenMissing(missingItems),
       dismissed: missingItems.filter((item) => item.status === 'dismissed').length,
-      documents: 4, // dossier texte + PDF + DOCX + demande de devis
     });
+    setView('result');
   };
 
-  if (result) {
+  // --- Écran 3 : préparer la consultation (chaîne dossier → entreprises) ---
+  if (view === 'consultation') {
+    return (
+      <main className="v7-assistant">
+        <ConsultationPrep
+          project={finalProject}
+          session={session}
+          onPublished={() => {}}
+          onGoToMissing={() => { setView('wizard'); setStep(6); }}
+        />
+        <nav className="wizard-nav">
+          <button type="button" className="wizard-nav-btn" onClick={() => setView('result')}>
+            ← Retour au dossier
+          </button>
+          <button type="button" className="wizard-nav-btn next" onClick={() => onGoToConsultations?.()}>
+            Suivre la consultation →
+          </button>
+        </nav>
+      </main>
+    );
+  }
+
+  // --- Écran 2 : résultat ---
+  if (view === 'result' && result) {
     return (
       <main className="v7-assistant">
         <section className="v7-result">
@@ -133,17 +163,19 @@ export default function ProjectWizard({ initialProject = {}, onSave }) {
             <li>✓ {result.works} lot{result.works > 1 ? 's' : ''} de travaux</li>
             <li>✓ {result.toVerify} point{result.toVerify > 1 ? 's' : ''} à vérifier</li>
             <li>✓ {result.missing} information{result.missing > 1 ? 's' : ''} manquante{result.missing > 1 ? 's' : ''}{result.dismissed ? ` (+${result.dismissed} à compléter plus tard)` : ''}</li>
-            <li>✓ {result.documents} documents prêts à générer</li>
           </ul>
           <p className="v7-result-hint">Votre dossier détaillé est disponible juste en dessous, exportable en PDF ou DOCX.</p>
           <div className="v7-result-actions">
-            <button type="button" className="dossier-action primary" onClick={() => document.querySelector('.v7-dossier')?.scrollIntoView({ behavior: 'smooth' })}>
-              Voir mon dossier
+            <button type="button" className="dossier-action" onClick={() => document.querySelector('.v7-dossier')?.scrollIntoView({ behavior: 'smooth' })}>
+              📄 Voir mon dossier
             </button>
-            <button type="button" className="dossier-action" disabled title="Disponible prochainement">
-              Préparer une demande de devis — bientôt
+            <button type="button" className="dossier-action primary" onClick={() => setView('consultation')}>
+              📨 Consulter des entreprises
             </button>
-            <button type="button" className="dossier-action" onClick={() => setResult(null)}>
+            <button type="button" className="dossier-action" onClick={() => { setView('wizard'); setStep(6); }}>
+              🔎 Vérifier les informations manquantes
+            </button>
+            <button type="button" className="dossier-action" onClick={() => { setResult(null); setView('wizard'); }}>
               Modifier mes réponses
             </button>
           </div>
@@ -152,6 +184,7 @@ export default function ProjectWizard({ initialProject = {}, onSave }) {
     );
   }
 
+  // --- Écran 1 : wizard pas à pas ---
   const TOTAL_STEPS = 6;
   const chips = buildSummaryChips(project);
   const bathroomSelected = project.roomIds.includes('bathroom') || project.projectType === 'bathroom';
