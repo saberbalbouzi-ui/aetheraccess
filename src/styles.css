@@ -29,4 +29,37 @@ button small { display: block; margin-top: 6px; color: #698073; font-size: 12px;
 .primary-action { justify-self: start; padding: 16px 22px; border: 0; border-radius: 999px; color: #153c31; background: #c9ef68; font-weight: 800; cursor: pointer; }
 .v7-dossier { margin-top: 24px; padding: 26px; border-radius: 22px; background: #153c31; color: #f4f4ea; }
 .v7-dossier pre { margin: 0; white-space: pre-wrap; font: 14px/1.65 Manrope, sans-serif; }
-@media (max-width: 640px) { .v7-app-shell { padding: 18px 12px 50px; } .v7-assistant-header, .v7-step { padding: 22px 18px; border-radius: 18px; } }
+
+/* --- V7.1 · Connexion Supabase --- */
+.v7-topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.v7-topbar .brand { font: italic 600 24px 'Playfair Display', serif; color: #153c31; }
+.auth-panel { margin-bottom: 22px; padding: 16px 18px; border: 1px solid #dfe5d9; border-radius: 16px; background: #fffffb; }
+.auth-panel label { display: block; margin-bottom: 10px; color: #48604f; font-size: 13px; font-weight: 600; }
+.auth-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.auth-row input { flex: 1 1 240px; padding: 12px 14px; border: 1px solid #cfdcc9; border-radius: 12px; }
+.auth-action { padding: 12px 18px; border: 0; border-radius: 999px; color: #f4f4ea; background: #153c31; font-weight: 700; cursor: pointer; }
+.auth-action:disabled { opacity: .6; cursor: wait; }
+.auth-connected { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.auth-email { font-weight: 700; color: #153c31; }
+.auth-offline { color: #698073; font-size: 13px; }
+.auth-message { display: block; margin-top: 8px; font-size: 13px; }
+.auth-message.sent { color: #2f7d4f; }
+.auth-message.error { color: #b34a2b; }
+.sync-status { margin-top: 18px; padding: 12px 18px; border-radius: 999px; font-size: 13px; font-weight: 700; width: fit-content; }
+.sync-saving { background: #eef2e4; color: #587064; }
+.sync-cloud { background: #e2f4d9; color: #2f7d4f; }
+.sync-local { background: #fff3d6; color: #8a6d1f; }
+.sync-error { background: #fbe3da; color: #b34a2b; }
+.v7-dashboard .dashboard-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.v7-dashboard .dashboard-header h2 { margin: 0; }
+.dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.dashboard-card { display: grid; gap: 6px; padding: 18px; border: 1px solid #d8e2d1; border-radius: 16px; background: #fafbf4; }
+.dashboard-card strong { color: #153c31; }
+.dashboard-card small { color: #698073; font-size: 12px; }
+.dashboard-actions { display: flex; gap: 8px; margin-top: 8px; }
+.dashboard-actions button { padding: 8px 14px; border: 1px solid #cfdcc9; border-radius: 999px; background: #fffffb; color: #173d31; font-weight: 700; font-size: 13px; cursor: pointer; }
+.dashboard-actions button:hover { border-color: #8ebd4b; background: #eff8d9; }
+.dashboard-actions button.danger { color: #b34a2b; }
+.dashboard-actions button.danger:hover { border-color: #b34a2b; background: #fbe3da; }
+
+@media (max-width: 640px) { .v7-app-shell { padding: 18px 12px 50px; } .v7-assistant-header, .v7-step { padding: 22px 18px; border-radius: 18px; } .auth-row { flex-direction: column; } }

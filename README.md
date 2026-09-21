@@ -1,22 +1,33 @@
-# AetherAccess V4
+# AetherAccess V7.1
 
-Assistant de consultation simplifié pour les projets de rénovation.
-
-## Objectif V4
-
-L’utilisateur n’a pas besoin de savoir rédiger un devis. Il répond à des questions simples et l’application prépare automatiquement un dossier à relire.
+Assistant guidé de structuration de projets de rénovation : l’utilisateur répond à quelques questions, AetherAccess propose les pièces, les lots de travaux et un dossier projet à relire.
 
 ## Fonctionnalités
 
-- Budget choisi par fourchette indicative.
-- Mois et année de démarrage séparés.
-- Objectifs sélectionnables avec cases simples.
-- État existant sélectionnable avec explication facultative.
-- Options « Je ne sais pas encore » et « À préciser ».
-- Ajout de pièces et sélection des travaux.
-- Détection automatique des lots.
-- Contrôle de complétude.
-- Dossier final et e-mail prêt à relire.
-- Liste bêta connectée à Supabase.
+- Wizard guidé : type de projet, type de bien, localisation, pièces, objectifs.
+- Moteur de suggestions de lots avec statuts (Confirmé, Conseillé, À vérifier).
+- Détection des informations manquantes.
+- Génération d’un dossier projet structuré.
+- Connexion par e-mail (lien magique) via Supabase Auth.
+- Sauvegarde cloud des projets (projets, pièces, lots, brief) avec fallback localStorage.
+- Tableau de bord « Mes projets » : liste, ouverture, suppression.
 
-Les fourchettes de budget sont des repères de planification choisis par l’utilisateur et ne constituent pas un prix de travaux. Le prix final dépend de la visite, des quantités, des matériaux, de l’état du bien, de la localisation et du devis de l’entreprise. Aucun appel IA, paiement ou changement de schéma Supabase n’est inclus dans cette version.
+## Configuration Supabase
+
+1. Copier `.env.example` en `.env.local` (déjà pré-rempli avec l’URL et la clé publishable du projet).
+2. Sur Vercel : ajouter `VITE_SUPABASE_URL` et `VITE_SUPABASE_PUBLISHABLE_KEY` dans Project Settings → Environment Variables.
+3. Dans le dashboard Supabase → Authentication → URL Configuration :
+   - Site URL : domaine de production Vercel.
+   - Redirect URLs : ajouter le domaine Vercel et `http://localhost:5173/**`.
+4. Vérifier que le provider « Email » est activé (Authentication → Providers).
+
+Les données sont protégées par le RLS : chaque utilisateur ne voit que ses propres projets (`renovation_projects`, `project_rooms`, `room_work_items`, `renovation_briefs`).
+
+## Développement
+
+```bash
+npm install
+npm run dev
+```
+
+Les suggestions techniques sont des pistes à confirmer avec l’entreprise. Les fourchettes et surfaces affichées sont des repères de planification, pas des prix de travaux.
