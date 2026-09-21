@@ -183,13 +183,19 @@ export default function App() {
         <>
           <AuthPanel session={session} profile={profile} />
           {tab === 'assistant' && !isContractor ? (
-            <ProjectWizard key={wizardKey} initialProject={currentProject} onSave={save} />
+            <ProjectWizard
+              key={wizardKey}
+              initialProject={currentProject}
+              session={session}
+              onSave={save}
+              onGoToConsultations={() => setTab('consultations')}
+            />
           ) : null}
           {tab === 'projects' && session?.user && !isContractor ? (
             <Dashboard userId={session.user.id} onOpenProject={openProject} onNewProject={newProject} />
           ) : null}
           {tab === 'consultations' && session?.user && !isContractor ? (
-            <ConsultationsPanel userId={session.user.id} />
+            <ConsultationsPanel userId={session.user.id} onOpenChantiers={() => setTab('sites')} />
           ) : null}
           {tab === 'contractor' && session?.user && isContractor ? (
             <ContractorSpace userId={session.user.id} email={session.user.email} />
