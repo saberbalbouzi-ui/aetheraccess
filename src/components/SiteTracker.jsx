@@ -27,11 +27,7 @@ function ReportForm({ workSiteId, userId, role, onSaved }) {
       return;
     }
 
-    // Upload des photos après création du compte rendu (besoin de son id dans le chemin).
-    if (files.length) {
-      const { data: latest } = await import('../services/site-service').then(() => ({ data: null })).catch(() => ({ data: null }));
-      void latest; // non utilisé : l’id vient du rechargement ci-dessous
-    }
+    const attachedFiles = files;
     setProgressNotes('');
     setIssues('');
     setNextActions('');
@@ -39,7 +35,7 @@ function ReportForm({ workSiteId, userId, role, onSaved }) {
     if (fileInput.current) fileInput.current.value = '';
     setMessage('Compte rendu ajouté.');
     setSaving(false);
-    onSaved?.(files);
+    onSaved?.(attachedFiles);
   };
 
   return (
