@@ -42,6 +42,11 @@ button small { display: block; margin-top: 6px; color: #698073; font-size: 12px;
 .primary-action { justify-self: start; padding: 16px 22px; border: 0; border-radius: 999px; color: #153c31; background: #c9ef68; font-weight: 800; cursor: pointer; }
 .v7-dossier { margin-top: 24px; padding: 26px; border-radius: 22px; background: #153c31; color: #f4f4ea; }
 .v7-dossier pre { margin: 0; white-space: pre-wrap; font: 14px/1.65 Manrope, sans-serif; }
+.dossier-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+.dossier-action { padding: 11px 18px; border: 1px solid #f4f4ea44; border-radius: 999px; background: transparent; color: #f4f4ea; font-weight: 700; cursor: pointer; }
+.dossier-action:hover { background: #f4f4ea1f; }
+.dossier-action.primary { border: 0; background: #c9ef68; color: #153c31; }
+.dossier-note { display: block; margin-top: 14px; color: #b9cfc2; font-size: 12px; }
 
 /* --- V7.1 · Connexion Supabase --- */
 .v7-topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }

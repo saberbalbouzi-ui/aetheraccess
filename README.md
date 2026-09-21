@@ -1,4 +1,4 @@
-# AetherAccess V7.1
+# AetherAccess V7.2
 
 Assistant guidé de structuration de projets de rénovation : l’utilisateur répond à quelques questions, AetherAccess propose les pièces, les lots de travaux et un dossier projet à relire.
 
@@ -8,7 +8,7 @@ Assistant guidé de structuration de projets de rénovation : l’utilisateur r�
 - Localisation hiérarchique non bloquante : Région → Département → Commune → Code postal (API officielle geo.api.gouv.fr), avec option « Je ne connais pas encore la ville ».
 - Moteur de suggestions de lots avec statuts (Confirmé, Conseillé, À vérifier).
 - Détection des informations manquantes.
-- Génération d’un dossier projet structuré.
+- Génération d’un dossier projet structuré avec exports **PDF, DOCX, TXT** et copie en un clic.
 - Connexion par e-mail (lien magique) via Supabase Auth.
 - Sauvegarde cloud des projets (projets, pièces, lots, brief) avec fallback localStorage.
 - Tableau de bord « Mes projets » : liste, ouverture, suppression.
@@ -30,5 +30,7 @@ Les données sont protégées par le RLS : chaque utilisateur ne voit que ses pr
 npm install
 npm run dev
 ```
+
+Les exports PDF/DOCX sont générés côté navigateur (`jspdf`, `docx`) à partir du dossier structuré — aucun serveur requis.
 
 Les suggestions techniques sont des pistes à confirmer avec l’entreprise. Les fourchettes et surfaces affichées sont des repères de planification, pas des prix de travaux.
