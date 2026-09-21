@@ -3,6 +3,9 @@ import { REGIONS } from '../data/france-regions';
 import { departmentsOfRegion } from '../data/france-departments';
 import { filterCommunes, getCommunesOfDepartment } from '../services/location-service';
 
+// Pays extensible : France par défaut, l'API de localisation peut en accueillir d'autres.
+const COUNTRIES = [{ code: 'FR', label: 'France' }];
+
 export default function LocationSelector({ value = {}, onChange }) {
   const [query, setQuery] = useState(value.city || '');
   const [communes, setCommunes] = useState([]);
@@ -37,7 +40,7 @@ export default function LocationSelector({ value = {}, onChange }) {
     const region = REGIONS.find((item) => item.code === event.target.value);
     setQuery('');
     setResults([]);
-    onChange({ unknown: false, regionCode: region?.code || '', regionName: region?.name || '' });
+    onChange({ unknown: false, country: { code: 'FR', label: 'France' }, regionCode: region?.code || '', regionName: region?.name || '' });
   };
 
   const selectDepartment = (event) => {
@@ -79,11 +82,21 @@ export default function LocationSelector({ value = {}, onChange }) {
     <section className="location-selector">
       <label className="location-unknown">
         <input type="checkbox" checked={unknown} onChange={toggleUnknown} />
-        Je ne connais pas encore la ville — cette étape ne bloque pas la suite
+        Je ne connais pas encore la ville
       </label>
+      {unknown ? (
+        <p className="location-later">La localisation pourra être complétée plus tard.</p>
+      ) : null}
 
       {!unknown ? (
         <div className="location-grid">
+          <label>
+            Pays
+            <select value={value.country?.code || 'FR'} disabled={COUNTRIES.length === 1} onChange={() => {}}>
+              {COUNTRIES.map((country) => <option key={country.code} value={country.code}>{country.label}</option>)}
+            </select>
+          </label>
+
           <label>
             Région
             <select value={value.regionCode || ''} onChange={selectRegion}>

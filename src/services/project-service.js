@@ -42,6 +42,8 @@ function completionPercentage(project = {}) {
   return Math.round((done / checks.length) * 100);
 }
 
+// Snapshot complet : conserve aussi les choix utilisateur (statuts, notes, infos écartées)
+// pour restaurer le wizard à l'identique.
 function projectSnapshot(project = {}) {
   return {
     name: project.name || '',
@@ -50,7 +52,13 @@ function projectSnapshot(project = {}) {
     location: project.location || {},
     roomIds: project.roomIds || [],
     objectives: project.objectives || [],
-    suggestions: (project.suggestions || []).map(({ id, label, category, status }) => ({ id, label, category, status })),
+    surface: project.surface || '',
+    existingCondition: project.existingCondition || '',
+    features: project.features || [],
+    workStatuses: project.workStatuses || {},
+    workNotes: project.workNotes || {},
+    missingDismissed: project.missingDismissed || [],
+    suggestions: (project.suggestions || []).map(({ id, label, category, status, rationale, note }) => ({ id, label, category, status, rationale, note })),
     missingInformation: project.missingInformation || [],
   };
 }
@@ -107,20 +115,24 @@ export async function saveProjectCloud(project, userId) {
         const bathroomRoom = insertedRooms.find((room) => room.room_name === 'Salle de bains');
         const kitchenRoom = insertedRooms.find((room) => room.room_name === 'Cuisine');
         const fallbackRoom = insertedRooms[0];
-        const items = suggestions.map((suggestion) => {
-          let target = fallbackRoom;
-          if (bathroomRoom && BATHROOM_WORKS.has(suggestion.id)) target = bathroomRoom;
-          else if (kitchenRoom && KITCHEN_WORKS.has(suggestion.id)) target = kitchenRoom;
-          return {
-            room_id: target.id,
-            trade_category: suggestion.category || 'Divers',
-            description: suggestion.label,
-            is_ai_suggested: true,
-            status: suggestion.status || 'proposed',
-          };
-        });
-        const { error: insertItemsError } = await supabase.from('room_work_items').insert(items);
-        if (insertItemsError) throw insertItemsError;
+        const items = suggestions
+          .filter((suggestion) => suggestion.status !== 'not-applicable')
+          .map((suggestion) => {
+            let target = fallbackRoom;
+            if (bathroomRoom && BATHROOM_WORKS.has(suggestion.id)) target = bathroomRoom;
+            else if (kitchenRoom && KITCHEN_WORKS.has(suggestion.id)) target = kitchenRoom;
+            return {
+              room_id: target.id,
+              trade_category: suggestion.category || 'Divers',
+              description: suggestion.label,
+              is_ai_suggested: true,
+              status: suggestion.status || 'proposed',
+            };
+          });
+        if (items.length) {
+          const { error: insertItemsError } = await supabase.from('room_work_items').insert(items);
+          if (insertItemsError) throw insertItemsError;
+        }
       }
     }
 
