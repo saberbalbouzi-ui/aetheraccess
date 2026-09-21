@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { decideQuote, inviteContractor, listInvitations, listQuotesForBrief, listMyBriefs } from '../services/company-service';
 import { compareQuotes, openWorkSite } from '../services/site-service';
 import { buildReminderMailto, isStaleInvitation, markReminded } from '../services/photo-service';
+import { buildInvitationMailto } from '../services/invitation-email';
+import { loadCloudProject } from '../services/project-service';
 
 const QUOTE_STATUS = {
   submitted: 'Reçu',
@@ -62,18 +64,22 @@ function QuoteComparison({ briefId }) {
           ))}
         </tbody>
       </table>
-      <p className="comparison-note">Cette grille met en évidence les montants et délais saisis ; elle ne désigne pas automatiquement la meilleure offre. Prestations, exclusions et garanties restent à comparer.</p>
+      <p className="comparison-note">Cette grille met en évidence les montants et délais saisis ; elle ne désigne pas automatiquement la meilleure offre. Prestations, exclusions et garanties restent à comparer — le choix final vous appartient.</p>
     </div>
   );
 }
 
-function BriefCard({ brief }) {
+function BriefCard({ brief, onOpenChantiers }) {
   const [expanded, setExpanded] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
   const [email, setEmail] = useState('');
   const [invitations, setInvitations] = useState([]);
   const [quotes, setQuotes] = useState([]);
   const [message, setMessage] = useState('');
+  const [acceptedSite, setAcceptedSite] = useState(false);
+  const [dossierLots, setDossierLots] = useState(null);
+
+  const projectId = brief.renovation_projects?.id || brief.project_id;
 
   const refresh = useCallback(async () => {
     const [{ invitations: rows }, { quotes: quoteRows }] = await Promise.all([
@@ -88,6 +94,15 @@ function BriefCard({ brief }) {
     if (expanded) refresh();
   }, [expanded, refresh]);
 
+  // Nombre de lots du dossier, pour situer la couverture de chaque devis (« 9/10 »).
+  useEffect(() => {
+    if (!expanded || !projectId) return;
+    loadCloudProject(projectId).then(({ project }) => {
+      const lots = (project?.suggestions || []).filter((work) => work.status !== 'not-applicable');
+      setDossierLots(lots.length || null);
+    });
+  }, [expanded, projectId]);
+
   const invite = async (event) => {
     event.preventDefault();
     setMessage('');
@@ -96,8 +111,11 @@ function BriefCard({ brief }) {
       setMessage(`Invitation impossible : ${error.message}`);
       return;
     }
+    // E-mail professionnel pré-rempli : l'utilisateur garde la main sur l'envoi.
+    const location = brief.renovation_projects?.location || '';
+    window.location.href = buildInvitationMailto(email, { location: { city: location }, name: brief.renovation_projects?.title }, brief.title);
     setEmail('');
-    setMessage(hint || 'Invitation envoyée.');
+    setMessage(hint || 'Invitation enregistrée. Votre messagerie s’est ouverte avec un message pré-rempli à envoyer.');
     refresh();
   };
 
@@ -108,14 +126,14 @@ function BriefCard({ brief }) {
       return;
     }
     if (decision === 'accepted') {
-      const projectId = brief.renovation_projects?.id || brief.project_id;
       const { error: siteError } = await openWorkSite(projectId, quote.id, quote.contractor_id);
       if (siteError) {
         setMessage(`Devis accepté, mais l’ouverture du chantier a échoué : ${siteError.message}`);
         refresh();
         return;
       }
-      setMessage('Devis accepté — le chantier est ouvert dans l’onglet Chantiers.');
+      setAcceptedSite(true);
+      setMessage('Devis accepté — le chantier est ouvert.');
     }
     refresh();
   };
@@ -152,10 +170,20 @@ function BriefCard({ brief }) {
             <label htmlFor={`invite-${brief.id}`}>Inviter une entreprise par e-mail</label>
             <div className="auth-row">
               <input id={`invite-${brief.id}`} type="email" required value={email} placeholder="contact@entreprise.fr" onChange={(event) => setEmail(event.target.value)} />
-              <button type="submit" className="auth-action">Inviter</button>
+              <button type="submit" className="auth-action">+ Inviter une entreprise</button>
             </div>
+            <small className="publish-hint-dark">Un e-mail professionnel pré-rempli s’ouvrira dans votre messagerie.</small>
           </form>
-          {message ? <small className="auth-message sent">{message}</small> : null}
+          {message ? (
+            <div className="invite-result">
+              <small className="auth-message sent">{message}</small>
+              {acceptedSite ? (
+                <button type="button" className="auth-action" onClick={() => onOpenChantiers?.()}>
+                  Suivre le chantier →
+                </button>
+              ) : null}
+            </div>
+          ) : null}
 
           <h3>Entreprises invitées</h3>
           {invitations.length ? (
@@ -178,7 +206,7 @@ function BriefCard({ brief }) {
             </ul>
           ) : <p className="brief-empty">Aucune entreprise invitée pour le moment.</p>}
 
-          <h3>Devis reçus</h3>
+          <h3>Devis reçus{quotes.length ? ` — ${quotes.length}` : ''}</h3>
           {quotes.length ? (
             <ul className="quote-list">
               {quotes.map((quote) => (
@@ -198,13 +226,14 @@ function BriefCard({ brief }) {
               ))}
             </ul>
           ) : <p className="brief-empty">Aucun devis reçu pour le moment.</p>}
+          {dossierLots ? <small className="comparison-note">Votre dossier compte {dossierLots} lot{dossierLots > 1 ? 's' : ''} de travaux à couvrir par les devis.</small> : null}
         </div>
       ) : null}
     </article>
   );
 }
 
-export default function ConsultationsPanel({ userId }) {
+export default function ConsultationsPanel({ userId, onOpenChantiers }) {
   const [briefs, setBriefs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -230,10 +259,10 @@ export default function ConsultationsPanel({ userId }) {
       {loading ? <p>Chargement…</p> : null}
       {error ? <p className="auth-message error">{error}</p> : null}
       {!loading && !briefs.length ? (
-        <p>Aucune consultation publiée. Depuis un projet enregistré, utilisez « Publier en consultation entreprises » sous le dossier.</p>
+        <p>Aucune consultation publiée. Depuis un projet enregistré, créez votre dossier puis « Consulter des entreprises ».</p>
       ) : null}
       <div className="dashboard-grid">
-        {briefs.map((brief) => <BriefCard key={brief.id} brief={brief} />)}
+        {briefs.map((brief) => <BriefCard key={brief.id} brief={brief} onOpenChantiers={onOpenChantiers} />)}
       </div>
     </section>
   );
