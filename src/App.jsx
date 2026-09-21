@@ -1,11 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import ProjectWizard from './components/ProjectWizard';
 import AuthPanel from './components/AuthPanel';
 import Dashboard from './components/Dashboard';
+import ProfileSettings from './components/ProfileSettings';
+import PublishPanel from './components/PublishPanel';
+import ConsultationsPanel from './components/ConsultationsPanel';
+import ContractorSpace from './components/ContractorSpace';
 import { generateProjectDossier } from './services/dossier-generator';
 import { exportDossierDocx, exportDossierPdf, exportDossierTxt } from './services/export-service';
 import { clearProjectFallback, loadProjectFallback, saveProjectCloud, saveProjectFallback } from './services/project-service';
 import { getCurrentSession, onAuthStateChange } from './services/auth-service';
+import { getMyProfile } from './services/company-service';
 import { supabaseConfigured } from './lib/supabase';
 
 const SYNC_LABELS = {
@@ -15,13 +20,22 @@ const SYNC_LABELS = {
   error: 'Synchronisation impossible — la copie locale est conservée.',
 };
 
+const TABS = [
+  { id: 'assistant', label: 'Assistant' },
+  { id: 'projects', label: 'Mes projets' },
+  { id: 'consultations', label: 'Consultations' },
+  { id: 'contractor', label: 'Entreprise', contractorOnly: true },
+  { id: 'profile', label: 'Profil' },
+];
+
 export default function App() {
   const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [tab, setTab] = useState('assistant');
   const [currentProject, setCurrentProject] = useState(() => loadProjectFallback() || {});
   const [wizardKey, setWizardKey] = useState(0);
   const [dossier, setDossier] = useState('');
   const [syncState, setSyncState] = useState(null);
-  const [showDashboard, setShowDashboard] = useState(false);
   const [copyState, setCopyState] = useState(false);
 
   useEffect(() => {
@@ -29,6 +43,23 @@ export default function App() {
     getCurrentSession().then(setSession);
     return onAuthStateChange(setSession);
   }, []);
+
+  const refreshProfile = useCallback(async (userId) => {
+    const { profile: data } = await getMyProfile(userId);
+    setProfile(data);
+  }, []);
+
+  useEffect(() => {
+    if (session?.user) {
+      refreshProfile(session.user.id);
+    } else {
+      setProfile(null);
+      setTab('assistant');
+    }
+  }, [session, refreshProfile]);
+
+  const isContractor = profile?.role === 'entreprise';
+  const visibleTabs = TABS.filter((item) => !item.contractorOnly || isContractor);
 
   const save = async (project) => {
     saveProjectFallback(project);
@@ -55,7 +86,7 @@ export default function App() {
     setCurrentProject(project);
     setDossier('');
     setSyncState(null);
-    setShowDashboard(false);
+    setTab('assistant');
     setWizardKey((key) => key + 1);
   };
 
@@ -64,7 +95,7 @@ export default function App() {
     setCurrentProject({});
     setDossier('');
     setSyncState(null);
-    setShowDashboard(false);
+    setTab('assistant');
     setWizardKey((key) => key + 1);
   };
 
@@ -83,19 +114,40 @@ export default function App() {
       <header className="v7-topbar">
         <span className="brand">AetherAccess</span>
         {session?.user ? (
-          <button type="button" className="auth-action" onClick={() => setShowDashboard((visible) => !visible)}>
-            {showDashboard ? 'Retour à l’assistant' : 'Mes projets'}
-          </button>
+          <nav className="v7-tabs">
+            {visibleTabs.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={tab === item.id ? 'v7-tab active' : 'v7-tab'}
+                onClick={() => setTab(item.id)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </nav>
         ) : null}
       </header>
       <AuthPanel session={session} />
-      {showDashboard && session?.user ? (
-        <Dashboard userId={session.user.id} onOpenProject={openProject} onNewProject={newProject} />
-      ) : (
+
+      {tab === 'assistant' ? (
         <ProjectWizard key={wizardKey} initialProject={currentProject} onSave={save} />
-      )}
-      {syncState ? <p className={`sync-status sync-${syncState}`}>{SYNC_LABELS[syncState]}</p> : null}
-      {dossier ? (
+      ) : null}
+      {tab === 'projects' && session?.user ? (
+        <Dashboard userId={session.user.id} onOpenProject={openProject} onNewProject={newProject} />
+      ) : null}
+      {tab === 'consultations' && session?.user ? (
+        <ConsultationsPanel userId={session.user.id} />
+      ) : null}
+      {tab === 'contractor' && session?.user && isContractor ? (
+        <ContractorSpace userId={session.user.id} email={session.user.email} />
+      ) : null}
+      {tab === 'profile' && session?.user ? (
+        <ProfileSettings session={session} profile={profile} onProfileChange={setProfile} />
+      ) : null}
+
+      {syncState && tab === 'assistant' ? <p className={`sync-status sync-${syncState}`}>{SYNC_LABELS[syncState]}</p> : null}
+      {dossier && tab === 'assistant' ? (
         <section className="v7-dossier">
           <h2>Dossier projet</h2>
           <pre>{dossier}</pre>
@@ -105,6 +157,7 @@ export default function App() {
             <button type="button" className="dossier-action" onClick={() => exportDossierDocx(currentProject)}>DOCX</button>
             <button type="button" className="dossier-action" onClick={() => exportDossierTxt(currentProject)}>TXT</button>
           </div>
+          <PublishPanel project={currentProject} session={session} onPublished={() => setTab('consultations')} />
           <small className="dossier-note">Document à relire et à confirmer avec l’entreprise avant utilisation.</small>
         </section>
       ) : null}
