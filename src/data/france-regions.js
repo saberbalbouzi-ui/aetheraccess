@@ -1,1 +1,20 @@
-V5 étape A — régions françaises.
+export const REGIONS = [
+  { code: '84', name: 'Auvergne-Rhône-Alpes' },
+  { code: '27', name: 'Bourgogne-Franche-Comté' },
+  { code: '53', name: 'Bretagne' },
+  { code: '24', name: 'Centre-Val de Loire' },
+  { code: '94', name: 'Corse' },
+  { code: '44', name: 'Grand Est' },
+  { code: '32', name: 'Hauts-de-France' },
+  { code: '11', name: 'Île-de-France' },
+  { code: '28', name: 'Normandie' },
+  { code: '75', name: 'Nouvelle-Aquitaine' },
+  { code: '76', name: 'Occitanie' },
+  { code: '52', name: 'Pays de la Loire' },
+  { code: '93', name: 'Provence-Alpes-Côte d’Azur' },
+  { code: '01', name: 'Guadeloupe' },
+  { code: '02', name: 'Martinique' },
+  { code: '03', name: 'Guyane' },
+  { code: '04', name: 'La Réunion' },
+  { code: '06', name: 'Mayotte' },
+];
