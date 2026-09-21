@@ -21,14 +21,20 @@ const SYNC_LABELS = {
   error: 'Synchronisation impossible — la copie locale est conservée.',
 };
 
+// Chaque profil ne voit que ce qui le concerne :
+// - ownerOnly : réservé aux particuliers (création de projet, cahier des charges, consultation des entreprises)
+// - contractorOnly : réservé aux entreprises (invitations reçues, briefs, devis à envoyer)
+// - sans marqueur : commun (suivi des chantiers, profil)
 const TABS = [
-  { id: 'assistant', label: 'Assistant' },
-  { id: 'projects', label: 'Mes projets' },
-  { id: 'consultations', label: 'Consultations' },
+  { id: 'assistant', label: 'Assistant', ownerOnly: true },
+  { id: 'projects', label: 'Mes projets', ownerOnly: true },
+  { id: 'consultations', label: 'Consultations', ownerOnly: true },
   { id: 'contractor', label: 'Entreprise', contractorOnly: true },
   { id: 'sites', label: 'Chantiers' },
   { id: 'profile', label: 'Profil' },
 ];
+
+const OWNER_ONLY_TABS = TABS.filter((item) => item.ownerOnly).map((item) => item.id);
 
 export default function App() {
   const [session, setSession] = useState(undefined); // undefined = session en cours de vérification
@@ -63,6 +69,15 @@ export default function App() {
     }
   }, [session, refreshProfile]);
 
+  const isContractor = profile?.role === 'entreprise';
+
+  // Redirige une entreprise vers son espace si elle se trouve sur un onglet réservé aux particuliers.
+  useEffect(() => {
+    if (isContractor && OWNER_ONLY_TABS.includes(tab)) {
+      setTab('contractor');
+    }
+  }, [isContractor, tab]);
+
   // Applique l'intention choisie sur l'écran d'accueil (particulier / entreprise)
   // dès que le profil est chargé, sans jamais écraser un rôle déjà défini.
   useEffect(() => {
@@ -84,8 +99,11 @@ export default function App() {
     })();
   }, [session, profile, refreshProfile]);
 
-  const isContractor = profile?.role === 'entreprise';
-  const visibleTabs = TABS.filter((item) => !item.contractorOnly || isContractor);
+  const visibleTabs = TABS.filter((item) => {
+    if (item.contractorOnly) return isContractor;
+    if (item.ownerOnly) return !isContractor;
+    return true;
+  });
 
   const save = async (project) => {
     saveProjectFallback(project);
@@ -164,13 +182,13 @@ export default function App() {
         // Espace dédié : toutes les fonctionnalités après connexion.
         <>
           <AuthPanel session={session} profile={profile} />
-          {tab === 'assistant' ? (
+          {tab === 'assistant' && !isContractor ? (
             <ProjectWizard key={wizardKey} initialProject={currentProject} onSave={save} />
           ) : null}
-          {tab === 'projects' && session?.user ? (
+          {tab === 'projects' && session?.user && !isContractor ? (
             <Dashboard userId={session.user.id} onOpenProject={openProject} onNewProject={newProject} />
           ) : null}
-          {tab === 'consultations' && session?.user ? (
+          {tab === 'consultations' && session?.user && !isContractor ? (
             <ConsultationsPanel userId={session.user.id} />
           ) : null}
           {tab === 'contractor' && session?.user && isContractor ? (
@@ -183,8 +201,8 @@ export default function App() {
             <ProfileSettings session={session} profile={profile} onProfileChange={setProfile} />
           ) : null}
 
-          {syncState && tab === 'assistant' ? <p className={`sync-status sync-${syncState}`}>{SYNC_LABELS[syncState]}</p> : null}
-          {dossier && tab === 'assistant' ? (
+          {syncState && tab === 'assistant' && !isContractor ? <p className={`sync-status sync-${syncState}`}>{SYNC_LABELS[syncState]}</p> : null}
+          {dossier && tab === 'assistant' && !isContractor ? (
             <section className="v7-dossier">
               <h2>Dossier projet</h2>
               <pre>{dossier}</pre>
