@@ -6,6 +6,7 @@ import ProfileSettings from './components/ProfileSettings';
 import PublishPanel from './components/PublishPanel';
 import ConsultationsPanel from './components/ConsultationsPanel';
 import ContractorSpace from './components/ContractorSpace';
+import WorkSitesPanel from './components/WorkSitesPanel';
 import { generateProjectDossier } from './services/dossier-generator';
 import { exportDossierDocx, exportDossierPdf, exportDossierTxt } from './services/export-service';
 import { clearProjectFallback, loadProjectFallback, saveProjectCloud, saveProjectFallback } from './services/project-service';
@@ -25,6 +26,7 @@ const TABS = [
   { id: 'projects', label: 'Mes projets' },
   { id: 'consultations', label: 'Consultations' },
   { id: 'contractor', label: 'Entreprise', contractorOnly: true },
+  { id: 'sites', label: 'Chantiers' },
   { id: 'profile', label: 'Profil' },
 ];
 
@@ -141,6 +143,9 @@ export default function App() {
       ) : null}
       {tab === 'contractor' && session?.user && isContractor ? (
         <ContractorSpace userId={session.user.id} email={session.user.email} />
+      ) : null}
+      {tab === 'sites' && session?.user ? (
+        <WorkSitesPanel userId={session.user.id} isContractor={isContractor} />
       ) : null}
       {tab === 'profile' && session?.user ? (
         <ProfileSettings session={session} profile={profile} onProfileChange={setProfile} />

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { decideQuote, inviteContractor, listInvitations, listMyBriefs, listQuotesForBrief } from '../services/company-service';
+import { decideQuote, inviteContractor, listInvitations, listQuotesForBrief, listMyBriefs } from '../services/company-service';
+import { compareQuotes, openWorkSite } from '../services/site-service';
 
 const QUOTE_STATUS = {
   submitted: 'Reçu',
@@ -9,8 +10,64 @@ const QUOTE_STATUS = {
 
 const formatAmount = (value) => `${Number(value || 0).toLocaleString('fr-FR')} €`;
 
+// Tableau de comparaison structurée des devis d’un cahier des charges.
+function QuoteComparison({ briefId }) {
+  const [rows, setRows] = useState([]);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    compareQuotes(briefId).then(({ quotes, error: loadError }) => {
+      setRows(quotes);
+      setError(loadError?.message || null);
+    });
+  }, [briefId]);
+
+  if (error) return <p className="auth-message error">{error}</p>;
+  if (!rows.length) return <p className="brief-empty">Aucun devis à comparer pour le moment.</p>;
+
+  const amounts = rows.map((row) => Number(row.global_amount));
+  const delays = rows.map((row) => Number(row.delay_weeks));
+  const minAmount = Math.min(...amounts);
+  const minDelay = Math.min(...delays);
+
+  return (
+    <div className="comparison-wrap">
+      <table className="comparison-table">
+        <thead>
+          <tr>
+            <th>Entreprise</th>
+            <th>Montant</th>
+            <th>Délai</th>
+            <th>Postes chiffrés</th>
+            <th>Statut</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.quote_id} className={row.status === 'accepted' ? 'quote-accepted' : ''}>
+              <td>{row.contractor_name}</td>
+              <td>
+                {formatAmount(row.global_amount)}
+                {Number(row.global_amount) === minAmount && rows.length > 1 ? <span className="comparison-flag">le moins cher</span> : null}
+              </td>
+              <td>
+                {row.delay_weeks} sem.
+                {Number(row.delay_weeks) === minDelay && rows.length > 1 ? <span className="comparison-flag">le plus rapide</span> : null}
+              </td>
+              <td>{row.items_count > 0 ? `${row.items_count} (${formatAmount(row.items_total)})` : '—'}</td>
+              <td>{QUOTE_STATUS[row.status] || row.status}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="comparison-note">Cette grille met en évidence les montants et délais saisis ; elle ne désigne pas automatiquement la meilleure offre. Prestations, exclusions et garanties restent à comparer.</p>
+    </div>
+  );
+}
+
 function BriefCard({ brief }) {
   const [expanded, setExpanded] = useState(false);
+  const [showComparison, setShowComparison] = useState(false);
   const [email, setEmail] = useState('');
   const [invitations, setInvitations] = useState([]);
   const [quotes, setQuotes] = useState([]);
@@ -42,9 +99,22 @@ function BriefCard({ brief }) {
     refresh();
   };
 
-  const decide = async (quoteId, decision) => {
-    const { error } = await decideQuote(quoteId, decision);
-    if (error) setMessage(`Action impossible : ${error.message}`);
+  const decide = async (quote, decision) => {
+    const { error } = await decideQuote(quote.id, decision);
+    if (error) {
+      setMessage(`Action impossible : ${error.message}`);
+      return;
+    }
+    if (decision === 'accepted') {
+      const projectId = brief.renovation_projects?.id || brief.project_id;
+      const { error: siteError } = await openWorkSite(projectId, quote.id, quote.contractor_id);
+      if (siteError) {
+        setMessage(`Devis accepté, mais l’ouverture du chantier a échoué : ${siteError.message}`);
+        refresh();
+        return;
+      }
+      setMessage('Devis accepté — le chantier est ouvert dans l’onglet Chantiers.');
+    }
     refresh();
   };
 
@@ -55,10 +125,20 @@ function BriefCard({ brief }) {
       <small>Statut : {brief.status === 'published' ? 'Publié' : brief.status === 'closed' ? 'Clôturé' : 'Brouillon'}</small>
       <div className="dashboard-actions">
         <button type="button" onClick={() => setExpanded((value) => !value)}>{expanded ? 'Refermer' : 'Gérer'}</button>
+        <button type="button" onClick={() => { setShowComparison((value) => !value); setExpanded(true); }}>
+          {showComparison ? 'Masquer la comparaison' : 'Comparer les devis'}
+        </button>
       </div>
 
       {expanded ? (
         <div className="brief-detail">
+          {showComparison ? (
+            <>
+              <h3>Comparaison des devis</h3>
+              <QuoteComparison briefId={brief.id} />
+            </>
+          ) : null}
+
           <form className="invite-form" onSubmit={invite}>
             <label htmlFor={`invite-${brief.id}`}>Inviter une entreprise par e-mail</label>
             <div className="auth-row">
@@ -92,8 +172,8 @@ function BriefCard({ brief }) {
                   </div>
                   {quote.status === 'submitted' ? (
                     <div className="dashboard-actions">
-                      <button type="button" onClick={() => decide(quote.id, 'accepted')}>Accepter</button>
-                      <button type="button" className="danger" onClick={() => decide(quote.id, 'rejected')}>Refuser</button>
+                      <button type="button" onClick={() => decide(quote, 'accepted')}>Accepter</button>
+                      <button type="button" className="danger" onClick={() => decide(quote, 'rejected')}>Refuser</button>
                     </div>
                   ) : null}
                 </li>
