@@ -19,6 +19,17 @@ Assistant guidé de structuration de projets de rénovation, avec boucle complè
 - **Suivi chantier partagé** : ouverture automatique à l’acceptation d’un devis, comptes rendus (avancement, problèmes, prochaines étapes) **avec photos** (bucket privé, URLs signées, lightbox), actions avec échéances ; le particulier pilote le statut.
 - Profil utilisateur : rôle particulier / entreprise, annuaire des entreprises.
 
+## Migrations base de données
+
+Les migrations sont appliquées sur le projet Supabase (réf. `ydujjwnijjjjjjyokmvx`) :
+
+| Migration | Contenu |
+|---|---|
+| `phase5_contractor_directory_and_email_invites` | Annuaire des entreprises, invitations par e-mail, trigger `handle_new_user` |
+| `phase6_site_reports_and_work_sites` | Tables `work_sites`, `site_reports`, `site_actions`, vue `quote_comparison` |
+| `phase7_report_photos_and_reminders` | Bucket Storage `site-photos` + politiques, colonne `photos`, `last_reminded_at` |
+| `phase8_fix_rls_recursion_and_invite_flow` | **Correctif critique** : récursion infinie des politiques RLS phase 4 résolue via fonctions `SECURITY DEFINER` ; l’entreprise peut désormais accepter/décliner ses invitations |
+
 ## Configuration Supabase
 
 1. Copier `.env.example` en `.env.local` (déjà pré-rempli avec l’URL et la clé publishable du projet).
