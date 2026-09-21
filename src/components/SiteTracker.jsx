@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { addSiteAction, addSiteReport, listSiteActions, listSiteReports, toggleSiteAction, updateWorkSiteStatus } from '../services/site-service';
+import { attachPhotosToReport, uploadReportPhoto } from '../services/photo-service';
+import ReportPhotos from './ReportPhotos';
 
 const SITE_STATUS = { active: 'En cours', completed: 'Terminé', suspended: 'Suspendu' };
 const formatDate = (iso) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -8,23 +10,36 @@ function ReportForm({ workSiteId, userId, role, onSaved }) {
   const [progressNotes, setProgressNotes] = useState('');
   const [issues, setIssues] = useState('');
   const [nextActions, setNextActions] = useState('');
+  const [files, setFiles] = useState([]);
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
+  const fileInput = useRef(null);
 
   const submit = async (event) => {
     event.preventDefault();
     setSaving(true);
+    setMessage('');
+
     const { error } = await addSiteReport(workSiteId, userId, role, { progressNotes, issues, nextActions });
-    setSaving(false);
     if (error) {
+      setSaving(false);
       setMessage(`Enregistrement impossible : ${error.message}`);
       return;
+    }
+
+    // Upload des photos après création du compte rendu (besoin de son id dans le chemin).
+    if (files.length) {
+      const { data: latest } = await import('../services/site-service').then(() => ({ data: null })).catch(() => ({ data: null }));
+      void latest; // non utilisé : l’id vient du rechargement ci-dessous
     }
     setProgressNotes('');
     setIssues('');
     setNextActions('');
+    setFiles([]);
+    if (fileInput.current) fileInput.current.value = '';
     setMessage('Compte rendu ajouté.');
-    onSaved?.();
+    setSaving(false);
+    onSaved?.(files);
   };
 
   return (
@@ -41,13 +56,24 @@ function ReportForm({ workSiteId, userId, role, onSaved }) {
         Prochaines étapes
         <textarea rows="2" value={nextActions} onChange={(event) => setNextActions(event.target.value)} placeholder="Ce qui est prévu ensuite…" />
       </label>
+      <label>
+        Photos (facultatif)
+        <input
+          ref={fileInput}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/heic"
+          multiple
+          onChange={(event) => setFiles(Array.from(event.target.files || []))}
+        />
+        <small>JPG, PNG, WebP ou HEIC — 8 Mo maximum par photo.</small>
+      </label>
       <button type="submit" className="auth-action" disabled={saving}>{saving ? 'Envoi…' : 'Ajouter le compte rendu'}</button>
       {message ? <small className="auth-message sent">{message}</small> : null}
     </form>
   );
 }
 
-// Fil de suivi d’un chantier : statut, actions, comptes rendus. Partagé particulier/entreprise.
+// Fil de suivi d’un chantier : statut, actions, comptes rendus avec photos. Partagé particulier/entreprise.
 export default function SiteTracker({ workSite, userId, role, isOwner }) {
   const [reports, setReports] = useState([]);
   const [actions, setActions] = useState([]);
@@ -90,6 +116,26 @@ export default function SiteTracker({ workSite, userId, role, isOwner }) {
   const changeStatus = async (event) => {
     const { error } = await updateWorkSiteStatus(workSite.id, event.target.value);
     if (error) setMessage(`Mise à jour impossible : ${error.message}`);
+  };
+
+  // Appelé par ReportForm après création : attache les photos au dernier compte rendu.
+  const onReportSaved = async (files = []) => {
+    if (!files.length) {
+      refresh();
+      return;
+    }
+    const { reports: latest } = await listSiteReports(workSite.id);
+    const reportId = latest?.[0]?.id;
+    if (reportId) {
+      const paths = [];
+      for (const file of files) {
+        const { path, error } = await uploadReportPhoto(workSite.id, reportId, file);
+        if (error) setMessage(error.message);
+        else if (path) paths.push(path);
+      }
+      if (paths.length) await attachPhotosToReport(reportId, paths);
+    }
+    refresh();
   };
 
   return (
@@ -138,12 +184,13 @@ export default function SiteTracker({ workSite, userId, role, isOwner }) {
               {report.progress_notes ? <p><em>Avancement :</em> {report.progress_notes}</p> : null}
               {report.issues ? <p><em>Problèmes :</em> {report.issues}</p> : null}
               {report.next_actions ? <p><em>Suite :</em> {report.next_actions}</p> : null}
+              {report.photos?.length ? <ReportPhotos paths={report.photos} /> : null}
             </li>
           ))}
         </ul>
       ) : <p className="brief-empty">Aucun compte rendu pour le moment.</p>}
 
-      <ReportForm workSiteId={workSite.id} userId={userId} role={role} onSaved={refresh} />
+      <ReportForm workSiteId={workSite.id} userId={userId} role={role} onSaved={onReportSaved} />
     </div>
   );
 }
