@@ -24,22 +24,69 @@ export async function updateMyProfile(userId, { fullName, businessName, role } =
   return { error };
 }
 
-// Une entreprise publie sa fiche dans l’annuaire pour être invitée par e-mail.
-export async function registerInDirectory(userId, email, businessName) {
+// ---------- Annuaire entreprises ----------
+
+// Une entreprise publie sa fiche dans l’annuaire pour être recommandée et invitée.
+export async function registerInDirectory(userId, email, businessName, extras = {}) {
   if (!supabase || !userId) return { error: new Error('Supabase indisponible.') };
-  const row = { user_id: userId, email: email?.trim().toLowerCase() };
+  const row = { user_id: userId, email: email?.trim().toLowerCase(), updated_at: new Date().toISOString() };
   if (businessName?.trim()) row.business_name = businessName.trim();
+  if (extras.specialties) row.specialties = extras.specialties;
+  if (extras.city !== undefined) row.city = extras.city?.trim() || null;
+  if (extras.postalCode !== undefined) row.postal_code = extras.postalCode?.trim() || null;
+  if (extras.departmentCode !== undefined) row.department_code = extras.departmentCode || null;
+  if (extras.interventionRadiusKm) row.intervention_radius_km = Number(extras.interventionRadiusKm) || 30;
+  if (extras.availability) row.availability = extras.availability;
   const { error } = await supabase
     .from('contractor_directory')
     .upsert(row, { onConflict: 'user_id' });
   return { error };
 }
 
+export async function getMyDirectoryEntry(userId) {
+  if (!supabase || !userId) return { entry: null, error: new Error('Supabase indisponible.') };
+  const { data, error } = await supabase
+    .from('contractor_directory')
+    .select('user_id, email, business_name, specialties, city, postal_code, department_code, intervention_radius_km, availability, verified, consultation_paused, last_activity_at')
+    .eq('user_id', userId)
+    .maybeSingle();
+  return { entry: data || null, error };
+}
+
+// Suspension des consultations : l'entreprise ne reçoit plus rien (anti-spam).
+export async function setConsultationPaused(userId, paused) {
+  if (!supabase || !userId) return { error: new Error('Supabase indisponible.') };
+  const { error } = await supabase
+    .from('contractor_directory')
+    .update({ consultation_paused: Boolean(paused), updated_at: new Date().toISOString() })
+    .eq('user_id', userId);
+  return { error };
+}
+
+// Annuaire complet (hors entreprises suspendues) pour le moteur de recommandation.
+export async function listDirectoryForMatching() {
+  if (!supabase) return { entries: [], error: new Error('Supabase indisponible.') };
+  const { data, error } = await supabase
+    .from('contractor_directory')
+    .select('user_id, email, business_name, specialties, city, postal_code, department_code, intervention_radius_km, availability, verified, consultation_paused, last_activity_at')
+    .eq('consultation_paused', false);
+  return { entries: data || [], error };
+}
+
 // ---------- Cahier des charges (specification_briefs) ----------
 
-export async function publishBrief(projectId, title, description) {
+export async function publishBrief(projectId, title, description, options = {}) {
   if (!supabase) return { brief: null, error: new Error('Supabase indisponible.') };
   const safeTitle = (title || '').trim().slice(0, 160) || 'Cahier des charges';
+  const diffusion = {
+    visibility: options.visibility || 'selected',
+    radius_km: options.radiusKm || 25,
+    deadline: options.deadline || null,
+    max_recipients: options.maxRecipients || 5,
+    budget_visible: Boolean(options.budgetVisible),
+    exact_address_visible: Boolean(options.exactAddressVisible),
+    anonymous: options.anonymous !== false,
+  };
   const { data: existing, error: readError } = await supabase
     .from('specification_briefs')
     .select('id, status')
@@ -52,7 +99,7 @@ export async function publishBrief(projectId, title, description) {
   if (existing) {
     const { data, error } = await supabase
       .from('specification_briefs')
-      .update({ title: safeTitle, description: description || null, status: 'published', updated_at: new Date().toISOString() })
+      .update({ title: safeTitle, description: description || null, status: 'published', ...diffusion, updated_at: new Date().toISOString() })
       .eq('id', existing.id)
       .select()
       .single();
@@ -61,7 +108,7 @@ export async function publishBrief(projectId, title, description) {
 
   const { data, error } = await supabase
     .from('specification_briefs')
-    .insert({ project_id: projectId, title: safeTitle, description: description || null, status: 'published' })
+    .insert({ project_id: projectId, title: safeTitle, description: description || null, status: 'published', ...diffusion })
     .select()
     .single();
   return { brief: data || null, error };
@@ -80,7 +127,7 @@ export async function listMyBriefs(userId) {
   if (!supabase || !userId) return { briefs: [], error: new Error('Supabase indisponible.') };
   const { data, error } = await supabase
     .from('specification_briefs')
-    .select('id, title, description, status, created_at, renovation_projects!inner(title, location, user_id)')
+    .select('id, title, description, status, visibility, radius_km, deadline, max_recipients, created_at, renovation_projects!inner(title, location, user_id)')
     .eq('renovation_projects.user_id', userId)
     .order('created_at', { ascending: false });
   return { briefs: data || [], error };
@@ -102,22 +149,37 @@ export async function inviteContractor(briefId, email) {
   if (directoryError) return { error: directoryError, hint: null };
 
   if (directoryEntry?.user_id) {
-    const { error } = await supabase.from('brief_contractors').insert({ brief_id: briefId, contractor_id: directoryEntry.user_id });
+    const { error } = await supabase.from('brief_contractors').insert({ brief_id: briefId, contractor_id: directoryEntry.user_id, notified_at: new Date().toISOString() });
     if (error && error.code === '23505') return { error: null, hint: 'Cette entreprise est déjà invitée sur ce cahier des charges.' };
     return { error, hint: null };
   }
 
   // Sinon, invitation en attente rattachée à son e-mail.
-  const { error } = await supabase.from('brief_contractors').insert({ brief_id: briefId, invited_email: normalized });
+  const { error } = await supabase.from('brief_contractors').insert({ brief_id: briefId, invited_email: normalized, notified_at: new Date().toISOString() });
   if (error && error.code === '23505') return { error: null, hint: 'Cette adresse est déjà invitée sur ce cahier des charges.' };
   return { error, hint: error ? null : 'Entreprise sans compte AetherAccess : elle retrouvera l’invitation à sa première connexion avec cet e-mail.' };
+}
+
+// Invitation depuis l'annuaire (recommandation) : conserve le score de matching.
+// Anti-doublon : une entreprise n'est jamais invitée deux fois sur le même brief (index unique).
+export async function inviteDirectoryContractor(briefId, entry) {
+  if (!supabase || !entry?.user_id) return { error: new Error('Supabase indisponible.'), hint: null };
+  const { error } = await supabase.from('brief_contractors').insert({
+    brief_id: briefId,
+    contractor_id: entry.user_id,
+    match_score: entry.matchScore ?? null,
+    distance_km: entry.distanceKm ?? null,
+    notified_at: new Date().toISOString(),
+  });
+  if (error && error.code === '23505') return { error: null, hint: `${entry.business_name || 'Cette entreprise'} est déjà invitée sur cette consultation.` };
+  return { error, hint: null };
 }
 
 export async function listInvitations(briefId) {
   if (!supabase) return { invitations: [], error: new Error('Supabase indisponible.') };
   const { data, error } = await supabase
     .from('brief_contractors')
-    .select('id, status, invited_email, created_at, profiles(business_name, full_name, email)')
+    .select('id, status, invited_email, match_score, distance_km, created_at, profiles(business_name, full_name, email)')
     .eq('brief_id', briefId)
     .order('created_at', { ascending: true });
   return { invitations: data || [], error };
@@ -191,10 +253,35 @@ export async function listContractorInvitations(contractorId, email) {
   if (!supabase || !contractorId) return { invitations: [], error: new Error('Supabase indisponible.') };
   const { data, error } = await supabase
     .from('brief_contractors')
-    .select('id, brief_id, status, invited_email, created_at, specification_briefs(title, status)')
+    .select('id, brief_id, status, invited_email, match_score, distance_km, created_at, specification_briefs(title, status, visibility, deadline)')
     .eq('contractor_id', contractorId)
     .order('created_at', { ascending: false });
   return { invitations: data || [], error };
+}
+
+// Consultations publiées dans le réseau, visibles de toute entreprise active.
+export async function listNetworkBriefs() {
+  if (!supabase) return { briefs: [], error: new Error('Supabase indisponible.') };
+  const { data, error } = await supabase
+    .from('specification_briefs')
+    .select('id, title, description, status, visibility, deadline, created_at, renovation_projects(title, location)')
+    .eq('status', 'published')
+    .eq('visibility', 'network')
+    .order('created_at', { ascending: false });
+  return { briefs: data || [], error };
+}
+
+// Une entreprise du réseau se positionne : on crée son invitation (intéressé directement).
+export async function expressInterest(briefId, contractorId) {
+  if (!supabase || !contractorId) return { error: new Error('Supabase indisponible.'), hint: null };
+  const { error } = await supabase.from('brief_contractors').insert({
+    brief_id: briefId,
+    contractor_id: contractorId,
+    status: 'accepted',
+    notified_at: new Date().toISOString(),
+  });
+  if (error && error.code === '23505') return { error: null, hint: 'Vous êtes déjà positionné sur cette consultation.' };
+  return { error, hint: null };
 }
 
 export async function setInvitationStatus(invitationId, status) {
