@@ -1,6 +1,6 @@
-# AetherAccess V7.2
+# AetherAccess V8
 
-Assistant guidé de structuration de projets de rénovation : l’utilisateur répond à quelques questions, AetherAccess propose les pièces, les lots de travaux et un dossier projet à relire.
+Assistant guidé de structuration de projets de rénovation, avec boucle complète **particulier ↔ entreprise** : le particulier prépare son dossier, le publie en consultation, invite des entreprises et reçoit leurs devis.
 
 ## Fonctionnalités
 
@@ -10,8 +10,11 @@ Assistant guidé de structuration de projets de rénovation : l’utilisateur r�
 - Détection des informations manquantes.
 - Génération d’un dossier projet structuré avec exports **PDF, DOCX, TXT** et copie en un clic.
 - Connexion par e-mail (lien magique) via Supabase Auth.
-- Sauvegarde cloud des projets (projets, pièces, lots, brief) avec fallback localStorage.
+- Sauvegarde cloud des projets avec fallback localStorage.
 - Tableau de bord « Mes projets » : liste, ouverture, suppression.
+- **Consultations entreprises** : publication du dossier en cahier des charges, invitation d’entreprises par e-mail, suivi des devis reçus, acceptation/refus.
+- **Espace entreprise** : invitations reçues (y compris avant création du compte), consultation du dossier client, devis chiffré (montant, délai, notes) en brouillon puis envoi.
+- Profil utilisateur : rôle particulier / entreprise, annuaire des entreprises.
 
 ## Configuration Supabase
 
@@ -22,7 +25,7 @@ Assistant guidé de structuration de projets de rénovation : l’utilisateur r�
    - Redirect URLs : ajouter le domaine Vercel et `http://localhost:5173/**`.
 4. Vérifier que le provider « Email » est activé (Authentication → Providers).
 
-Les données sont protégées par le RLS : chaque utilisateur ne voit que ses propres projets (`renovation_projects`, `project_rooms`, `room_work_items`, `renovation_briefs`).
+Les données sont protégées par le RLS : chaque utilisateur ne voit que ses propres projets ; une entreprise ne voit que les cahiers des charges sur lesquels elle est invitée et qu’elle a acceptés. Les invitations par e-mail sont rattachées automatiquement au compte à la première connexion (trigger `handle_new_user`).
 
 ## Développement
 
