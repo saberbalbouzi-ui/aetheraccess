@@ -78,8 +78,10 @@ export default function App() {
     }
   }, [isContractor, tab]);
 
-  // Applique l'intention choisie sur l'écran d'accueil (particulier / entreprise)
-  // dès que le profil est chargé, sans jamais écraser un rôle déjà défini.
+  // Après le clic sur le lien de l'e-mail : applique l'intention choisie sur l'écran
+  // d'accueil (particulier / entreprise), sans jamais écraser un rôle déjà défini.
+  // Une entreprise qui arrive par le lien atterrit sur son profil à compléter :
+  // c'est sa fiche de recommandation qui alimente le moteur de matching.
   useEffect(() => {
     if (!session?.user || !profile) return;
     const intent = localStorage.getItem(SIGNUP_ROLE_KEY);
@@ -95,7 +97,7 @@ export default function App() {
         await registerInDirectory(session.user.id, session.user.email, profile.business_name);
       }
       await refreshProfile(session.user.id);
-      setTab(intent === 'entreprise' ? 'contractor' : 'assistant');
+      setTab(intent === 'entreprise' ? 'profile' : 'assistant');
     })();
   }, [session, profile, refreshProfile]);
 
