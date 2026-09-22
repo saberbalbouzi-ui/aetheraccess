@@ -80,10 +80,58 @@ export async function listMyBriefs(userId) {
   if (!supabase || !userId) return { briefs: [], error: new Error('Supabase indisponible.') };
   const { data, error } = await supabase
     .from('specification_briefs')
-    .select('id, title, description, status, created_at, renovation_projects!inner(title, location, user_id)')
+    .select('id, title, description, status, visibility, radius_km, deadline, max_recipients, created_at, renovation_projects!inner(title, location, user_id)')
     .eq('renovation_projects.user_id', userId)
     .order('created_at', { ascending: false });
   return { briefs: data || [], error };
+}
+
+// ---------- Diffusion réseau ----------
+
+// Paramètres de diffusion choisis par le particulier (rayon, date limite, quota).
+export async function updateBriefDiffusion(briefId, { visibility, radiusKm, deadline, maxRecipients } = {}) {
+  if (!supabase) return { error: new Error('Supabase indisponible.') };
+  const row = { updated_at: new Date().toISOString() };
+  if (visibility) row.visibility = visibility;
+  if (radiusKm != null) row.radius_km = Number(radiusKm) || null;
+  if (deadline !== undefined) row.deadline = deadline || null;
+  if (maxRecipients != null) row.max_recipients = Number(maxRecipients) || null;
+  const { error } = await supabase.from('specification_briefs').update(row).eq('id', briefId);
+  return { error };
+}
+
+// Consultations publiées dans le réseau, non expirées (lecture entreprise, RLS réseau).
+export async function listNetworkBriefs() {
+  if (!supabase) return { briefs: [], error: new Error('Supabase indisponible.') };
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from('specification_briefs')
+    .select('id, title, description, deadline, radius_km, created_at, renovation_projects(title, location)')
+    .eq('status', 'published')
+    .eq('visibility', 'network')
+    .or(`deadline.is.null,deadline.gte.${today}`)
+    .order('created_at', { ascending: false });
+  return { briefs: data || [], error };
+}
+
+// L'entreprise exprime son intérêt : le particulier garde la main (il invite ensuite).
+export async function expressInterest(briefId, contractorId) {
+  if (!supabase || !contractorId) return { error: new Error('Supabase indisponible.') };
+  const { error } = await supabase
+    .from('brief_contractors')
+    .insert({ brief_id: briefId, contractor_id: contractorId, status: 'interested' });
+  if (error && error.code === '23505') return { error: null, hint: 'Intérêt déjà signalé pour cette consultation.' };
+  return { error };
+}
+
+// Horodatage de lecture du dossier par l'entreprise.
+export async function markBriefViewed(invitationId) {
+  if (!supabase) return { error: new Error('Supabase indisponible.') };
+  const { error } = await supabase
+    .from('brief_contractors')
+    .update({ viewed_at: new Date().toISOString() })
+    .eq('id', invitationId);
+  return { error };
 }
 
 // ---------- Invitations ----------
@@ -117,7 +165,7 @@ export async function listInvitations(briefId) {
   if (!supabase) return { invitations: [], error: new Error('Supabase indisponible.') };
   const { data, error } = await supabase
     .from('brief_contractors')
-    .select('id, status, invited_email, created_at, profiles(business_name, full_name, email)')
+    .select('id, contractor_id, status, invited_email, viewed_at, created_at, profiles(business_name, full_name, email)')
     .eq('brief_id', briefId)
     .order('created_at', { ascending: true });
   return { invitations: data || [], error };
