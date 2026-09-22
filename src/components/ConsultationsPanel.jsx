@@ -4,6 +4,7 @@ import { compareQuotes, openWorkSite } from '../services/site-service';
 import { buildReminderMailto, isStaleInvitation, markReminded } from '../services/photo-service';
 import { buildInvitationMailto } from '../services/invitation-email';
 import { loadCloudProject } from '../services/project-service';
+import RecommendedContractors from './RecommendedContractors';
 
 const QUOTE_STATUS = {
   submitted: 'Reçu',
@@ -77,7 +78,7 @@ function BriefCard({ brief, onOpenChantiers }) {
   const [quotes, setQuotes] = useState([]);
   const [message, setMessage] = useState('');
   const [acceptedSite, setAcceptedSite] = useState(false);
-  const [dossierLots, setDossierLots] = useState(null);
+  const [dossierProject, setDossierProject] = useState(null);
 
   const projectId = brief.renovation_projects?.id || brief.project_id;
 
@@ -94,14 +95,14 @@ function BriefCard({ brief, onOpenChantiers }) {
     if (expanded) refresh();
   }, [expanded, refresh]);
 
-  // Nombre de lots du dossier, pour situer la couverture de chaque devis (« 9/10 »).
+  // Projet complet (localisation + lots) : alimente le moteur de recommandation
+  // et situe la couverture de chaque devis (« 9/10 »).
   useEffect(() => {
     if (!expanded || !projectId) return;
-    loadCloudProject(projectId).then(({ project }) => {
-      const lots = (project?.suggestions || []).filter((work) => work.status !== 'not-applicable');
-      setDossierLots(lots.length || null);
-    });
+    loadCloudProject(projectId).then(({ project }) => setDossierProject(project || null));
   }, [expanded, projectId]);
+
+  const dossierLots = (dossierProject?.suggestions || []).filter((work) => work.status !== 'not-applicable').length || null;
 
   const invite = async (event) => {
     event.preventDefault();
@@ -112,10 +113,28 @@ function BriefCard({ brief, onOpenChantiers }) {
       return;
     }
     // E-mail professionnel pré-rempli : l'utilisateur garde la main sur l'envoi.
-    const location = brief.renovation_projects?.location || '';
-    window.location.href = buildInvitationMailto(email, { location: { city: location }, name: brief.renovation_projects?.title }, brief.title);
+    const project = dossierProject || { location: { city: brief.renovation_projects?.location }, name: brief.renovation_projects?.title };
+    window.location.href = buildInvitationMailto(email, project, brief.title);
     setEmail('');
     setMessage(hint || 'Invitation enregistrée. Votre messagerie s’est ouverte avec un message pré-rempli à envoyer.');
+    refresh();
+  };
+
+  // Sélection d’une entreprise recommandée : même envoi manuel que l’invitation par e-mail.
+  const inviteRecommended = async (contractor) => {
+    if (!contractor.email) {
+      setMessage('Adresse e-mail non disponible pour cette entreprise — vous pouvez l’inviter par e-mail si vous la connaissez.');
+      return;
+    }
+    setMessage('');
+    const { error, hint } = await inviteContractor(brief.id, contractor.email);
+    if (error) {
+      setMessage(`Invitation impossible : ${error.message}`);
+      return;
+    }
+    const project = dossierProject || { location: { city: brief.renovation_projects?.location }, name: brief.renovation_projects?.title };
+    window.location.href = buildInvitationMailto(contractor.email, project, brief.title);
+    setMessage(hint || `Invitation enregistrée pour ${contractor.business_name || contractor.email}. Votre messagerie s’est ouverte avec un message pré-rempli à envoyer.`);
     refresh();
   };
 
@@ -166,13 +185,25 @@ function BriefCard({ brief, onOpenChantiers }) {
             </>
           ) : null}
 
+          {dossierProject ? (
+            <>
+              <h3>Entreprises recommandées</h3>
+              <RecommendedContractors
+                project={dossierProject}
+                alreadyInvitedIds={invitations.map((invitation) => invitation.contractor_id).filter(Boolean)}
+                alreadyInvitedEmails={invitations.map((invitation) => invitation.invited_email).filter(Boolean)}
+                onSelect={inviteRecommended}
+              />
+            </>
+          ) : null}
+
           <form className="invite-form" onSubmit={invite}>
-            <label htmlFor={`invite-${brief.id}`}>Inviter une entreprise par e-mail</label>
+            <label htmlFor={`invite-${brief.id}`}>Vous connaissez déjà une entreprise ?</label>
             <div className="auth-row">
               <input id={`invite-${brief.id}`} type="email" required value={email} placeholder="contact@entreprise.fr" onChange={(event) => setEmail(event.target.value)} />
-              <button type="submit" className="auth-action">+ Inviter une entreprise</button>
+              <button type="submit" className="auth-action">Inviter par e-mail</button>
             </div>
-            <small className="publish-hint-dark">Un e-mail professionnel pré-rempli s’ouvrira dans votre messagerie.</small>
+            <small className="publish-hint-dark">Un e-mail professionnel pré-rempli s’ouvrira dans votre messagerie : vous gardez la main sur l’envoi.</small>
           </form>
           {message ? (
             <div className="invite-result">
