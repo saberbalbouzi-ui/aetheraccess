@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { decideQuote, inviteContractor, listInvitations, listQuotesForBrief, listMyBriefs } from '../services/company-service';
+import { confirmInterestInvitation, decideQuote, inviteContractor, listInvitations, listQuotesForBrief, listMyBriefs } from '../services/company-service';
 import { compareQuotes, openWorkSite } from '../services/site-service';
 import { buildReminderMailto, isStaleInvitation, markReminded } from '../services/photo-service';
 import { buildInvitationMailto } from '../services/invitation-email';
@@ -11,6 +11,17 @@ const QUOTE_STATUS = {
   accepted: 'Accepté',
   rejected: 'Refusé',
 };
+
+const INVITATION_STATUS = {
+  invited: 'Invitée',
+  viewed: 'A consulté le dossier',
+  interested: 'Intéressée — invitez-la',
+  accepted: 'A accepté',
+  declined: 'A décliné',
+};
+
+// Nombre maximal d'entreprises contactées en une seule action (règle anti-spam).
+const BULK_INVITE_LIMIT = 10;
 
 const formatAmount = (value) => `${Number(value || 0).toLocaleString('fr-FR')} €`;
 const formatDate = (iso) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
@@ -103,6 +114,8 @@ function BriefCard({ brief, onOpenChantiers }) {
   }, [expanded, projectId]);
 
   const dossierLots = (dossierProject?.suggestions || []).filter((work) => work.status !== 'not-applicable').length || null;
+  const fallbackProject = { location: { city: brief.renovation_projects?.location }, name: brief.renovation_projects?.title };
+  const mailProject = dossierProject || fallbackProject;
 
   const invite = async (event) => {
     event.preventDefault();
@@ -113,8 +126,7 @@ function BriefCard({ brief, onOpenChantiers }) {
       return;
     }
     // E-mail professionnel pré-rempli : l'utilisateur garde la main sur l'envoi.
-    const project = dossierProject || { location: { city: brief.renovation_projects?.location }, name: brief.renovation_projects?.title };
-    window.location.href = buildInvitationMailto(email, project, brief.title);
+    window.location.href = buildInvitationMailto(email, mailProject, brief.title);
     setEmail('');
     setMessage(hint || 'Invitation enregistrée. Votre messagerie s’est ouverte avec un message pré-rempli à envoyer.');
     refresh();
@@ -132,9 +144,43 @@ function BriefCard({ brief, onOpenChantiers }) {
       setMessage(`Invitation impossible : ${error.message}`);
       return;
     }
-    const project = dossierProject || { location: { city: brief.renovation_projects?.location }, name: brief.renovation_projects?.title };
-    window.location.href = buildInvitationMailto(contractor.email, project, brief.title);
+    window.location.href = buildInvitationMailto(contractor.email, mailProject, brief.title);
     setMessage(hint || `Invitation enregistrée pour ${contractor.business_name || contractor.email}. Votre messagerie s’est ouverte avec un message pré-rempli à envoyer.`);
+    refresh();
+  };
+
+  // Diffusion contrôlée : plusieurs entreprises, quota limité, un seul e-mail groupé.
+  const inviteBulk = async (contractors) => {
+    const batch = contractors.filter((contractor) => contractor.email).slice(0, BULK_INVITE_LIMIT);
+    if (!batch.length) return;
+    setMessage('');
+    const sentEmails = [];
+    for (const contractor of batch) {
+      const { error } = await inviteContractor(brief.id, contractor.email);
+      if (!error) sentEmails.push(contractor.email.toLowerCase());
+    }
+    if (sentEmails.length) {
+      window.location.href = buildInvitationMailto(sentEmails.join(','), mailProject, brief.title);
+      setMessage(`${sentEmails.length} invitation${sentEmails.length > 1 ? 's' : ''} enregistrée${sentEmails.length > 1 ? 's' : ''}. Votre messagerie s’est ouverte avec un message groupé pré-rempli à envoyer.`);
+    } else {
+      setMessage('Ces entreprises sont déjà invitées sur cette consultation.');
+    }
+    refresh();
+  };
+
+  // Une entreprise du réseau s'est signalée : invitation formelle + e-mail pré-rempli.
+  const inviteInterested = async (invitation) => {
+    setMessage('');
+    const { error } = await confirmInterestInvitation(invitation.id);
+    if (error) {
+      setMessage(`Invitation impossible : ${error.message}`);
+      return;
+    }
+    const targetEmail = invitation.profiles?.email;
+    if (targetEmail) {
+      window.location.href = buildInvitationMailto(targetEmail, mailProject, brief.title);
+    }
+    setMessage(`Invitation envoyée à ${invitation.profiles?.business_name || 'l’entreprise'}. Elle pourra consulter le dossier complet après acceptation.`);
     refresh();
   };
 
@@ -169,6 +215,12 @@ function BriefCard({ brief, onOpenChantiers }) {
       <strong>{brief.title}</strong>
       <small>{brief.renovation_projects?.title} · {brief.renovation_projects?.location || 'Localisation à préciser'}</small>
       <small>Statut : {brief.status === 'published' ? 'Publié' : brief.status === 'closed' ? 'Clôturé' : 'Brouillon'}</small>
+      {brief.visibility === 'network' ? (
+        <small className="diffusion-badge">
+          🌐 Diffusée dans le réseau{brief.radius_km ? ` · rayon ${brief.radius_km} km` : ''}
+          {brief.deadline ? ` · jusqu’au ${formatDate(brief.deadline)}` : ''}
+        </small>
+      ) : null}
       <div className="dashboard-actions">
         <button type="button" onClick={() => setExpanded((value) => !value)}>{expanded ? 'Refermer' : 'Gérer'}</button>
         <button type="button" onClick={() => { setShowComparison((value) => !value); setExpanded(true); }}>
@@ -193,6 +245,7 @@ function BriefCard({ brief, onOpenChantiers }) {
                 alreadyInvitedIds={invitations.map((invitation) => invitation.contractor_id).filter(Boolean)}
                 alreadyInvitedEmails={invitations.map((invitation) => invitation.invited_email).filter(Boolean)}
                 onSelect={inviteRecommended}
+                onBulkInvite={inviteBulk}
               />
             </>
           ) : null}
@@ -221,14 +274,19 @@ function BriefCard({ brief, onOpenChantiers }) {
             <ul className="invitation-list">
               {invitations.map((invitation) => {
                 const stale = isStaleInvitation(invitation);
+                const statusLabel = invitation.invited_email
+                  ? `${invitation.invited_email} · en attente de compte`
+                  : INVITATION_STATUS[invitation.status] || 'Invitée';
                 return (
                   <li key={invitation.id} className={stale ? 'invitation-stale' : ''}>
                     <span>{invitation.profiles?.business_name || invitation.profiles?.full_name || invitation.invited_email || 'Entreprise'}</span>
                     <small>
-                      {invitation.invited_email ? `${invitation.invited_email} · en attente de compte` : invitation.status === 'accepted' ? 'A accepté' : invitation.status === 'declined' ? 'A décliné' : 'Invitée'}
+                      {statusLabel}
                       {invitation.last_reminded_at ? ` · relancée le ${formatDate(invitation.last_reminded_at)}` : ''}
                     </small>
-                    {stale ? (
+                    {invitation.status === 'interested' ? (
+                      <button type="button" className="remind-action" onClick={() => inviteInterested(invitation)}>Inviter</button>
+                    ) : stale ? (
                       <button type="button" className="remind-action" onClick={() => remind(invitation)}>Relancer</button>
                     ) : null}
                   </li>

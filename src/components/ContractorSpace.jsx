@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getContractorBrief, listContractorInvitations, listMyQuotes, saveQuote, setInvitationStatus, submitQuote } from '../services/company-service';
+import { expressInterest, getContractorBrief, listContractorInvitations, listMyQuotes, listNetworkBriefs, markBriefViewed, saveQuote, setInvitationStatus, submitQuote } from '../services/company-service';
 
 const STATUS_LABELS = { draft: 'Brouillon', submitted: 'Envoyé', accepted: 'Accepté', rejected: 'Refusé' };
+
+const INVITATION_STATUS = {
+  invited: 'En attente de réponse',
+  viewed: 'Consultée',
+  interested: 'Intérêt envoyé — en attente d’invitation',
+  accepted: 'Acceptée',
+  declined: 'Déclinée',
+};
 
 function QuoteForm({ briefId, contractorId, existing, onSaved }) {
   const [amount, setAmount] = useState(existing?.global_amount ?? '');
@@ -129,18 +137,23 @@ function ContractorBriefView({ briefId, contractorId, existingQuote, onDone }) {
 export default function ContractorSpace({ userId, email }) {
   const [invitations, setInvitations] = useState([]);
   const [quotes, setQuotes] = useState([]);
+  const [networkBriefs, setNetworkBriefs] = useState([]);
   const [openBrief, setOpenBrief] = useState(null);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    const [{ invitations: rows }, { quotes: quoteRows }] = await Promise.all([
+    const [{ invitations: rows }, { quotes: quoteRows }, { briefs: networkRows }] = await Promise.all([
       listContractorInvitations(userId, email),
       listMyQuotes(userId),
+      listNetworkBriefs(),
     ]);
     setInvitations(rows);
     setQuotes(quoteRows);
+    // Exclut les consultations déjà liées à l'entreprise (invitée, intéressée…).
+    const knownBriefIds = new Set(rows.map((row) => row.brief_id));
+    setNetworkBriefs((networkRows || []).filter((brief) => !knownBriefIds.has(brief.id)));
     setLoading(false);
   }, [userId, email]);
 
@@ -156,6 +169,24 @@ export default function ContractorSpace({ userId, email }) {
     }
     setMessage(status === 'accepted' ? 'Invitation acceptée. Vous pouvez consulter le dossier et proposer un devis.' : 'Invitation déclinée.');
     refresh();
+  };
+
+  // L'entreprise se signale sur une consultation réseau : le particulier décide ensuite.
+  const showInterest = async (briefId) => {
+    setMessage('');
+    const { error, hint } = await expressInterest(briefId, userId);
+    if (error) {
+      setMessage(`Action impossible : ${error.message}`);
+      return;
+    }
+    setMessage(hint || 'Intérêt envoyé. Le particulier verra votre profil et pourra vous inviter : vous accéderez alors au dossier complet.');
+    refresh();
+  };
+
+  const toggleDossier = (invitation) => {
+    const next = openBrief === invitation.brief_id ? null : invitation.brief_id;
+    setOpenBrief(next);
+    if (next && !invitation.viewed_at) markBriefViewed(invitation.id);
   };
 
   const quoteFor = (briefId) => quotes.find((quote) => quote.brief_id === briefId);
@@ -180,7 +211,7 @@ export default function ContractorSpace({ userId, email }) {
             <article className="dashboard-card brief-card" key={invitation.id}>
               <strong>{brief?.title || 'Consultation'}</strong>
               <small>Reçue le {new Date(invitation.created_at).toLocaleDateString('fr-FR')} · {brief?.status === 'published' ? 'publiée' : brief?.status || '—'}</small>
-              <small>Statut : {invitation.status === 'accepted' ? 'Acceptée' : invitation.status === 'declined' ? 'Déclinée' : 'En attente de réponse'}{quote ? ` · Devis : ${STATUS_LABELS[quote.status] || quote.status}` : ''}</small>
+              <small>Statut : {INVITATION_STATUS[invitation.status] || invitation.status}{quote ? ` · Devis : ${STATUS_LABELS[quote.status] || quote.status}` : ''}</small>
               <div className="dashboard-actions">
                 {invitation.status === 'invited' ? (
                   <>
@@ -189,7 +220,7 @@ export default function ContractorSpace({ userId, email }) {
                   </>
                 ) : null}
                 {canView ? (
-                  <button type="button" onClick={() => setOpenBrief(openBrief === invitation.brief_id ? null : invitation.brief_id)}>
+                  <button type="button" onClick={() => toggleDossier(invitation)}>
                     {openBrief === invitation.brief_id ? 'Refermer le dossier' : 'Voir le dossier client'}
                   </button>
                 ) : null}
@@ -200,6 +231,27 @@ export default function ContractorSpace({ userId, email }) {
             </article>
           );
         })}
+      </div>
+
+      <div className="dashboard-header network-header">
+        <h2>Nouvelles consultations du réseau</h2>
+      </div>
+      {!loading && !networkBriefs.length ? (
+        <p className="brief-empty">Aucune consultation réseau en ce moment. Complétez votre fiche (Profil) pour être mieux recommandé.</p>
+      ) : null}
+      <div className="dashboard-grid">
+        {networkBriefs.map((brief) => (
+          <article className="dashboard-card brief-card" key={brief.id}>
+            <strong>{brief.title}</strong>
+            <small>{brief.renovation_projects?.location || 'Localisation communiquée après invitation'} · publiée le {new Date(brief.created_at).toLocaleDateString('fr-FR')}</small>
+            {brief.description ? <small>{brief.description}</small> : null}
+            {brief.deadline ? <small>⏳ Réponses avant le {new Date(`${brief.deadline}T00:00:00`).toLocaleDateString('fr-FR')}</small> : null}
+            <div className="dashboard-actions">
+              <button type="button" onClick={() => showInterest(brief.id)}>Je suis intéressé</button>
+            </div>
+            <small className="comparison-note">Le dossier complet (pièces, lots, détails) est accessible après invitation du particulier.</small>
+          </article>
+        ))}
       </div>
     </section>
   );
