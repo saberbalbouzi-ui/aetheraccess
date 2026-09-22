@@ -159,6 +159,14 @@ button small { display: block; margin-top: 6px; color: #698073; font-size: 12.5p
 .diffusion-badge { display: inline-block; width: fit-content; padding: 4px 12px; border-radius: 999px; background: #e2f4d9; color: #2f7d4f; font-size: 12px; font-weight: 700; }
 .network-header { margin-top: 28px; padding-top: 18px; border-top: 1px solid #dfe5d9; }
 
+/* --- V16 · Bandeau de guidage après enregistrement --- */
+.next-step-banner { display: flex; justify-content: space-between; align-items: center; gap: 18px; margin-top: 18px; padding: 18px 22px; border: 1px solid #8ebd4b; border-left: 5px solid #2f7d4f; border-radius: 16px; background: #f6fae9; flex-wrap: wrap; }
+.next-step-body { display: grid; gap: 6px; max-width: 640px; }
+.next-step-body strong { color: #153c31; font-size: 15px; }
+.next-step-body p { margin: 0; color: #48604f; font-size: 13.5px; line-height: 1.6; }
+.next-step-btn { padding: 12px 20px; border: 0; border-radius: 999px; background: #153c31; color: #f4f4ea; font-weight: 800; font-size: 13.5px; cursor: pointer; white-space: nowrap; }
+.next-step-btn:hover { background: #1d4d3e; }
+
 /* --- Localisation --- */
 .location-selector { display: grid; gap: 14px; }
 .location-grid { display: grid; gap: 12px; max-width: 620px; }
@@ -305,4 +313,4 @@ button small { display: block; margin-top: 6px; color: #698073; font-size: 12.5p
 .photo-lightbox { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 24px; background: rgba(15, 32, 26, .85); cursor: zoom-out; }
 .photo-lightbox img { max-width: 100%; max-height: 100%; border-radius: 12px; }
 
-@media (max-width: 640px) { .v7-app-shell { padding: 18px 12px 50px; } .v7-assistant-header, .v7-step, .access-hero, .v7-result { padding: 22px 18px; border-radius: 18px; } .auth-row { flex-direction: column; } .action-form { grid-template-columns: 1fr; } .missing-item { flex-direction: column; align-items: stretch; } .reco-card { flex-direction: column; align-items: stretch; } }
+@media (max-width: 640px) { .v7-app-shell { padding: 18px 12px 50px; } .v7-assistant-header, .v7-step, .access-hero, .v7-result { padding: 22px 18px; border-radius: 18px; } .auth-row { flex-direction: column; } .action-form { grid-template-columns: 1fr; } .missing-item { flex-direction: column; align-items: stretch; } .reco-card { flex-direction: column; align-items: stretch; } .next-step-banner { flex-direction: column; align-items: stretch; } }

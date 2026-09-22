@@ -155,6 +155,10 @@ export default function App() {
     }
   };
 
+  const scrollToPublish = () => {
+    document.querySelector('.publish-panel')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
   const isGuest = session === null;
 
   return (
@@ -210,6 +214,21 @@ export default function App() {
           ) : null}
 
           {syncState && tab === 'assistant' && !isContractor ? <p className={`sync-status sync-${syncState}`}>{SYNC_LABELS[syncState]}</p> : null}
+          {dossier && tab === 'assistant' && !isContractor ? (
+            <div className="next-step-banner">
+              <div className="next-step-body">
+                <strong>Prochaine étape : recevoir des réponses d'entreprises</strong>
+                <p>
+                  Votre projet est enregistré et reste privé : aucune entreprise ne peut le voir sans action de votre part.
+                  Pour le rendre visible, publiez la consultation ci-dessous, puis invitez des entreprises
+                  ou diffusez-la dans le réseau.
+                </p>
+              </div>
+              <button type="button" className="next-step-btn" onClick={scrollToPublish}>
+                Publier ma consultation ↓
+              </button>
+            </div>
+          ) : null}
           {dossier && tab === 'assistant' && !isContractor ? (
             <section className="v7-dossier">
               <h2>Dossier projet</h2>
