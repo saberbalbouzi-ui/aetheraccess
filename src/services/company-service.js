@@ -175,7 +175,7 @@ export async function listInvitations(briefId) {
   if (!supabase) return { invitations: [], error: new Error('Supabase indisponible.') };
   const { data, error } = await supabase
     .from('brief_contractors')
-    .select('id, contractor_id, status, invited_email, viewed_at, created_at, profiles(business_name, full_name, email)')
+    .select('id, contractor_id, status, invited_email, viewed_at, last_reminded_at, created_at, profiles(business_name, full_name, email)')
     .eq('brief_id', briefId)
     .order('created_at', { ascending: true });
   return { invitations: data || [], error };
@@ -249,7 +249,7 @@ export async function listContractorInvitations(contractorId, email) {
   if (!supabase || !contractorId) return { invitations: [], error: new Error('Supabase indisponible.') };
   const { data, error } = await supabase
     .from('brief_contractors')
-    .select('id, brief_id, status, invited_email, created_at, specification_briefs(title, status)')
+    .select('id, brief_id, status, invited_email, viewed_at, created_at, specification_briefs(title, status)')
     .eq('contractor_id', contractorId)
     .order('created_at', { ascending: false });
   return { invitations: data || [], error };
