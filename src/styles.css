@@ -83,6 +83,7 @@ button small { display: block; margin-top: 6px; color: #698073; font-size: 12.5p
 .work-lot-btn.confirm:hover { background: #eef7e8; }
 .work-lot-btn.dismiss { color: #8a6d1f; }
 .work-lot-btn.restore { border-color: #8ebd4b; color: #2f7d4f; }
+.work-lot-btn:disabled { opacity: .6; cursor: default; }
 .work-lot-note { width: 100%; padding: 10px 12px; border: 1px solid #cfdcc9; border-radius: 10px; background: #fffffb; color: #173d31; font-size: 13px; resize: vertical; }
 
 /* --- V12 · Centre de contrôle --- */
@@ -122,6 +123,26 @@ button small { display: block; margin-top: 6px; color: #698073; font-size: 12.5p
 .invite-form-dark .publish-hint { margin-top: 8px; }
 .invite-result { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
 .publish-hint-dark { color: #587064; font-size: 12.5px; }
+
+/* --- V14 · Entreprises recommandées (matching) --- */
+.reco-panel { display: grid; gap: 14px; margin-top: 8px; }
+.reco-headline { margin: 0; color: #48604f; font-size: 14px; line-height: 1.6; }
+.reco-headline strong { color: #153c31; }
+.reco-status { margin: 0; color: #587064; font-size: 13.5px; line-height: 1.6; }
+.reco-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.reco-card { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid #e4e9dc; border-radius: 14px; background: #fffffb; flex-wrap: wrap; }
+.reco-card-main { display: grid; gap: 4px; min-width: 0; }
+.reco-card-main strong { color: #153c31; font-size: 14.5px; }
+.reco-card-main small { color: #698073; font-size: 12.5px; }
+.reco-verified { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: #eff8d9; color: #2f7d4f; font-size: 11px; font-weight: 800; vertical-align: middle; }
+.reco-specialties { color: #587064; font-style: italic; }
+.reco-card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.reco-on-dark { display: grid; gap: 16px; margin-top: 22px; padding-top: 18px; border-top: 1px solid #f4f4ea2e; }
+.reco-title { margin: 0; color: #f4f4ea; font-size: 19px; }
+.reco-on-dark .reco-headline { color: #d9e8d9; }
+.reco-on-dark .reco-headline strong { color: #c9ef68; }
+.reco-on-dark .reco-status { color: #b9cfc2; }
+.reco-on-dark .comparison-note { color: #b9cfc2; }
 
 /* --- Localisation --- */
 .location-selector { display: grid; gap: 14px; }
@@ -196,6 +217,9 @@ button small { display: block; margin-top: 6px; color: #698073; font-size: 12.5p
 .profile-form { display: grid; gap: 14px; max-width: 560px; }
 .profile-form label { display: grid; gap: 6px; color: #48604f; font-size: 13px; font-weight: 600; }
 .profile-form input, .profile-form select { width: 100%; padding: 13px 15px; color: #173d31; border: 1px solid #cfdcc9; border-radius: 12px; background: #fffffb; }
+.profile-form label.wizard-checkbox { display: flex; grid-template-columns: none; flex-direction: row; align-items: center; }
+.profile-form label.wizard-checkbox input { width: auto; }
+.profile-section-title { margin: 8px 0 0; padding-top: 14px; border-top: 1px solid #dfe5d9; color: #153c31; font-size: 15px; }
 .profile-hint { color: #587064; font-size: 13px; }
 .brief-detail { margin-top: 14px; padding-top: 14px; border-top: 1px solid #dfe5d9; display: grid; gap: 14px; }
 .brief-detail h3, .brief-detail h4 { margin: 0; color: #153c31; font-size: 15px; }
@@ -260,4 +284,4 @@ button small { display: block; margin-top: 6px; color: #698073; font-size: 12.5p
 .photo-lightbox { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 24px; background: rgba(15, 32, 26, .85); cursor: zoom-out; }
 .photo-lightbox img { max-width: 100%; max-height: 100%; border-radius: 12px; }
 
-@media (max-width: 640px) { .v7-app-shell { padding: 18px 12px 50px; } .v7-assistant-header, .v7-step, .access-hero, .v7-result { padding: 22px 18px; border-radius: 18px; } .auth-row { flex-direction: column; } .action-form { grid-template-columns: 1fr; } .missing-item { flex-direction: column; align-items: stretch; } }
+@media (max-width: 640px) { .v7-app-shell { padding: 18px 12px 50px; } .v7-assistant-header, .v7-step, .access-hero, .v7-result { padding: 22px 18px; border-radius: 18px; } .auth-row { flex-direction: column; } .action-form { grid-template-columns: 1fr; } .missing-item { flex-direction: column; align-items: stretch; } .reco-card { flex-direction: column; align-items: stretch; } }

@@ -1,15 +1,18 @@
 import { useState } from 'react';
 import { inviteContractor, publishBrief } from '../services/company-service';
 import { buildInvitationMailto } from '../services/invitation-email';
+import RecommendedContractors from './RecommendedContractors';
 
 // Écran intermédiaire entre le dossier et l'invitation :
 // récapitule ce que contient le dossier, publie la consultation,
-// puis prépare un e-mail professionnel pré-rempli pour chaque entreprise.
+// puis propose d'abord les entreprises recommandées par le moteur de matching.
 export default function ConsultationPrep({ project, session, onPublished, onGoToMissing }) {
   const [brief, setBrief] = useState(null);
   const [email, setEmail] = useState('');
   const [state, setState] = useState('idle'); // idle | publishing | inviting | error
   const [message, setMessage] = useState('');
+  const [invitedEmails, setInvitedEmails] = useState([]);
+  const [invitedIds, setInvitedIds] = useState([]);
 
   if (!session?.user) {
     return <p className="publish-hint">Connectez-vous pour publier ce dossier et solliciter des entreprises.</p>;
@@ -45,22 +48,34 @@ export default function ConsultationPrep({ project, session, onPublished, onGoTo
     onPublished?.(published);
   };
 
-  const invite = async (event) => {
-    event.preventDefault();
-    if (!brief) return;
+  // Envoi commun : invitation en base + e-mail professionnel pré-rempli.
+  const sendInvitation = async (targetEmail, contractorId = null) => {
     setState('inviting');
     setMessage('');
-    const { error, hint } = await inviteContractor(brief.id, email);
+    const { error, hint } = await inviteContractor(brief.id, targetEmail);
     if (error) {
       setState('error');
       setMessage(`Invitation impossible : ${error.message}`);
-      return;
+      return false;
     }
-    // Ouvre l'e-mail pré-rempli dans le client de l'utilisateur : il garde la main sur l'envoi.
-    window.location.href = buildInvitationMailto(email, project, brief.title);
-    setEmail('');
+    window.location.href = buildInvitationMailto(targetEmail, project, brief.title);
+    setInvitedEmails((current) => [...new Set([...current, targetEmail.toLowerCase()])]);
+    if (contractorId) setInvitedIds((current) => [...new Set([...current, contractorId])]);
     setState('idle');
     setMessage(hint || 'Invitation enregistrée. Votre messagerie s’est ouverte avec un message pré-rempli à envoyer.');
+    return true;
+  };
+
+  const inviteByEmail = async (event) => {
+    event.preventDefault();
+    if (!brief) return;
+    const sent = await sendInvitation(email.trim());
+    if (sent) setEmail('');
+  };
+
+  const inviteRecommended = (contractor) => {
+    if (!brief || !contractor.email) return;
+    sendInvitation(contractor.email, contractor.user_id);
   };
 
   return (
@@ -86,24 +101,31 @@ export default function ConsultationPrep({ project, session, onPublished, onGoTo
       {!brief ? (
         <div className="v7-result-actions">
           <button type="button" className="dossier-action primary" onClick={publish} disabled={state === 'publishing'}>
-            {state === 'publishing' ? 'Publication…' : 'Publier la consultation'}
+            {state === 'publishing' ? 'Publication…' : 'Trouver les entreprises adaptées'}
           </button>
         </div>
       ) : (
-        <>
-          <p className="v7-result-hint">Consultation publiée ✓ — invitez maintenant des entreprises :</p>
-          <form className="invite-form invite-form-dark" onSubmit={invite}>
-            <label htmlFor="prep-invite-email">Entreprises à consulter</label>
+        <div className="reco-on-dark">
+          <h2 className="reco-title">Entreprises recommandées pour votre projet</h2>
+          <RecommendedContractors
+            project={project}
+            alreadyInvitedIds={invitedIds}
+            alreadyInvitedEmails={invitedEmails}
+            onSelect={inviteRecommended}
+          />
+
+          <form className="invite-form invite-form-dark" onSubmit={inviteByEmail}>
+            <label htmlFor="prep-invite-email">Vous connaissez déjà une entreprise ?</label>
             <div className="auth-row">
               <input id="prep-invite-email" type="email" required value={email} placeholder="contact@entreprise.fr"
                 onChange={(event) => setEmail(event.target.value)} />
-              <button type="submit" className="dossier-action primary" disabled={state === 'inviting'}>
-                {state === 'inviting' ? 'Préparation…' : '+ Inviter une entreprise'}
+              <button type="submit" className="dossier-action" disabled={state === 'inviting'}>
+                {state === 'inviting' ? 'Préparation…' : 'Inviter par e-mail'}
               </button>
             </div>
             <small className="publish-hint">Un e-mail professionnel pré-rempli s’ouvrira dans votre messagerie : vous gardez la main sur l’envoi.</small>
           </form>
-        </>
+        </div>
       )}
 
       {message ? <small className={`dossier-note ${state === 'error' ? 'publish-error' : ''}`}>{message}</small> : null}
