@@ -17,10 +17,13 @@ function locationHeadline(location = {}) {
 
 // « Entreprises recommandées pour votre projet » — affichées AVANT l'invitation par e-mail.
 // Le particulier voit d'abord les entreprises adaptées, puis choisit.
-export default function RecommendedContractors({ project, alreadyInvitedIds = [], alreadyInvitedEmails = [], onSelect, onViewProfile }) {
+// Si onBulkInvite est fourni : sélection multiple possible (diffusion contrôlée,
+// toujours avec confirmation explicite avant tout envoi).
+export default function RecommendedContractors({ project, alreadyInvitedIds = [], alreadyInvitedEmails = [], onSelect, onBulkInvite, onViewProfile }) {
   const [recommendations, setRecommendations] = useState([]);
   const [total, setTotal] = useState(0);
   const [state, setState] = useState('loading'); // loading | ready | empty | error
+  const [selected, setSelected] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -40,6 +43,29 @@ export default function RecommendedContractors({ project, alreadyInvitedIds = []
 
   const invitedIds = useMemo(() => new Set(alreadyInvitedIds), [alreadyInvitedIds]);
   const invitedEmails = useMemo(() => new Set(alreadyInvitedEmails.map((mail) => (mail || '').toLowerCase())), [alreadyInvitedEmails]);
+
+  const isInvited = (contractor) =>
+    invitedIds.has(contractor.user_id) || invitedEmails.has((contractor.email || '').toLowerCase());
+
+  const toggle = (contractor) => {
+    setSelected((current) =>
+      current.some((item) => item.user_id === contractor.user_id)
+        ? current.filter((item) => item.user_id !== contractor.user_id)
+        : [...current, contractor],
+    );
+  };
+
+  const bulkInvite = () => {
+    if (!selected.length || !onBulkInvite) return;
+    const names = selected.map((contractor) => contractor.business_name || contractor.email).join(', ');
+    const confirmed = window.confirm(
+      `Vous allez inviter ${selected.length} entreprise${selected.length > 1 ? 's' : ''} : ${names}.\n\n` +
+      'Votre messagerie s’ouvrira avec un e-mail professionnel pré-rempli : l’envoi reste entre vos mains. Confirmer ?',
+    );
+    if (!confirmed) return;
+    onBulkInvite(selected);
+    setSelected([]);
+  };
 
   if (state === 'loading') {
     return <p className="reco-status">Recherche des entreprises compatibles…</p>;
@@ -63,9 +89,20 @@ export default function RecommendedContractors({ project, alreadyInvitedIds = []
       </p>
       <ul className="reco-list">
         {recommendations.map((contractor, index) => {
-          const invited = invitedIds.has(contractor.user_id) || invitedEmails.has((contractor.email || '').toLowerCase());
+          const invited = isInvited(contractor);
+          const checked = selected.some((item) => item.user_id === contractor.user_id);
           return (
             <li key={contractor.user_id} className="reco-card">
+              {onBulkInvite ? (
+                <input
+                  type="checkbox"
+                  className="reco-check"
+                  checked={checked}
+                  disabled={invited || !contractor.email}
+                  aria-label={`Sélectionner ${contractor.business_name || 'cette entreprise'}`}
+                  onChange={() => toggle(contractor)}
+                />
+              ) : null}
               <div className="reco-card-main">
                 <strong>
                   {index + 1}. {contractor.business_name || 'Entreprise'}
@@ -97,6 +134,14 @@ export default function RecommendedContractors({ project, alreadyInvitedIds = []
           );
         })}
       </ul>
+      {onBulkInvite ? (
+        <div className="reco-bulk-bar">
+          <span>{selected.length ? `${selected.length} entreprise${selected.length > 1 ? 's' : ''} sélectionnée${selected.length > 1 ? 's' : ''}` : 'Cochez les entreprises à inviter'}</span>
+          <button type="button" className="auth-action" disabled={!selected.length} onClick={bulkInvite}>
+            Inviter la sélection
+          </button>
+        </div>
+      ) : null}
       <p className="comparison-note">
         Classement indicatif basé sur la compatibilité avec vos travaux, la proximité, la zone d’intervention et la disponibilité déclarée. Il ne préjuge pas de la qualité des entreprises : le choix vous appartient.
       </p>
