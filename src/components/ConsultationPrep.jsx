@@ -1,11 +1,15 @@
 import { useState } from 'react';
-import { inviteContractor, publishBrief } from '../services/company-service';
+import { inviteContractor, publishBrief, updateBriefDiffusion } from '../services/company-service';
 import { buildInvitationMailto } from '../services/invitation-email';
 import RecommendedContractors from './RecommendedContractors';
+
+// Nombre maximal d'entreprises contactées en une seule action (règle anti-spam).
+const BULK_INVITE_LIMIT = 10;
 
 // Écran intermédiaire entre le dossier et l'invitation :
 // récapitule ce que contient le dossier, publie la consultation,
 // puis propose d'abord les entreprises recommandées par le moteur de matching.
+// Deux modes de diffusion : sélection manuelle (par défaut) et publication réseau.
 export default function ConsultationPrep({ project, session, onPublished, onGoToMissing }) {
   const [brief, setBrief] = useState(null);
   const [email, setEmail] = useState('');
@@ -13,6 +17,10 @@ export default function ConsultationPrep({ project, session, onPublished, onGoTo
   const [message, setMessage] = useState('');
   const [invitedEmails, setInvitedEmails] = useState([]);
   const [invitedIds, setInvitedIds] = useState([]);
+  const [networkRadius, setNetworkRadius] = useState(30);
+  const [networkDeadline, setNetworkDeadline] = useState('');
+  const [networkMax, setNetworkMax] = useState(10);
+  const [networkPublished, setNetworkPublished] = useState(false);
 
   if (!session?.user) {
     return <p className="publish-hint">Connectez-vous pour publier ce dossier et solliciter des entreprises.</p>;
@@ -78,6 +86,60 @@ export default function ConsultationPrep({ project, session, onPublished, onGoTo
     sendInvitation(contractor.email, contractor.user_id);
   };
 
+  // Diffusion contrôlée : plusieurs entreprises d'un coup, avec quota et confirmation
+  // explicite (gérée dans RecommendedContractors). Un seul e-mail groupé s'ouvre.
+  const inviteBulk = async (contractors) => {
+    if (!brief) return;
+    const batch = contractors.filter((contractor) => contractor.email).slice(0, BULK_INVITE_LIMIT);
+    if (!batch.length) return;
+    setState('inviting');
+    setMessage('');
+    const sentEmails = [];
+    for (const contractor of batch) {
+      const { error } = await inviteContractor(brief.id, contractor.email);
+      if (!error) {
+        sentEmails.push(contractor.email.toLowerCase());
+        setInvitedIds((current) => [...new Set([...current, contractor.user_id])]);
+      }
+    }
+    if (sentEmails.length) {
+      window.location.href = buildInvitationMailto(sentEmails.join(','), project, brief.title);
+      setInvitedEmails((current) => [...new Set([...current, ...sentEmails])]);
+      setMessage(`${sentEmails.length} invitation${sentEmails.length > 1 ? 's' : ''} enregistrée${sentEmails.length > 1 ? 's' : ''}. Votre messagerie s’est ouverte avec un message groupé pré-rempli à envoyer.`);
+    } else {
+      setMessage('Ces entreprises sont déjà invitées sur cette consultation.');
+    }
+    setState('idle');
+  };
+
+  // Publication réseau : visible par les entreprises du secteur, avec date d'expiration.
+  const publishNetwork = async () => {
+    if (!brief) return;
+    const confirmed = window.confirm(
+      `Publier cette consultation dans le réseau AetherAccess ?\n\n` +
+      `Elle sera visible par les entreprises dans un rayon de ${networkRadius} km` +
+      `${networkDeadline ? ` jusqu’au ${new Date(`${networkDeadline}T00:00:00`).toLocaleDateString('fr-FR')}` : ''}.\n` +
+      'Votre adresse exacte n’est jamais affichée. Confirmer ?',
+    );
+    if (!confirmed) return;
+    setState('publishing');
+    setMessage('');
+    const { error } = await updateBriefDiffusion(brief.id, {
+      visibility: 'network',
+      radiusKm: networkRadius,
+      deadline: networkDeadline || null,
+      maxRecipients: networkMax,
+    });
+    if (error) {
+      setState('error');
+      setMessage(`Publication réseau impossible : ${error.message}`);
+      return;
+    }
+    setNetworkPublished(true);
+    setState('idle');
+    setMessage('Consultation publiée dans le réseau. Les entreprises intéressées se signaleront : vous les inviterez ensuite.');
+  };
+
   return (
     <section className="v7-result">
       <span className="eyebrow">CONSULTATION</span>
@@ -112,7 +174,37 @@ export default function ConsultationPrep({ project, session, onPublished, onGoTo
             alreadyInvitedIds={invitedIds}
             alreadyInvitedEmails={invitedEmails}
             onSelect={inviteRecommended}
+            onBulkInvite={inviteBulk}
           />
+
+          <div className="network-panel">
+            <h2 className="reco-title">Diffuser dans le réseau AetherAccess</h2>
+            {networkPublished ? (
+              <p className="publish-hint">
+                ✓ Consultation visible dans le réseau{networkRadius ? ` — rayon ${networkRadius} km` : ''}
+                {networkDeadline ? `, jusqu’au ${new Date(`${networkDeadline}T00:00:00`).toLocaleDateString('fr-FR')}` : ''}.
+                Les entreprises intéressées se signalent : vous gardez la main sur les invitations.
+              </p>
+            ) : (
+              <div className="network-form">
+                <label>
+                  Rayon de diffusion (km)
+                  <input type="number" min="5" max="200" value={networkRadius} onChange={(event) => setNetworkRadius(event.target.value)} />
+                </label>
+                <label>
+                  Date limite de réponse (optionnel)
+                  <input type="date" value={networkDeadline} onChange={(event) => setNetworkDeadline(event.target.value)} />
+                </label>
+                <label>
+                  Nombre max. d’entreprises contactées
+                  <input type="number" min="1" max={BULK_INVITE_LIMIT} value={networkMax} onChange={(event) => setNetworkMax(event.target.value)} />
+                </label>
+                <button type="button" className="dossier-action" onClick={publishNetwork} disabled={state === 'publishing'}>
+                  {state === 'publishing' ? 'Publication…' : 'Publier dans le réseau'}
+                </button>
+              </div>
+            )}
+          </div>
 
           <form className="invite-form invite-form-dark" onSubmit={inviteByEmail}>
             <label htmlFor="prep-invite-email">Vous connaissez déjà une entreprise ?</label>

@@ -124,6 +124,16 @@ export async function expressInterest(briefId, contractorId) {
   return { error };
 }
 
+// Le particulier transforme un intérêt en invitation formelle (accès au dossier complet).
+export async function confirmInterestInvitation(invitationId) {
+  if (!supabase) return { error: new Error('Supabase indisponible.') };
+  const { error } = await supabase
+    .from('brief_contractors')
+    .update({ status: 'invited', notified_at: new Date().toISOString() })
+    .eq('id', invitationId);
+  return { error };
+}
+
 // Horodatage de lecture du dossier par l'entreprise.
 export async function markBriefViewed(invitationId) {
   if (!supabase) return { error: new Error('Supabase indisponible.') };
